@@ -78,7 +78,7 @@ class Soft_body {
     let velocity = mass_point.velocity;
     let dot_product = velocity.dot(normal);
     let reflection_velocity = velocity.sub(normal.mult(2 * dot_product));
-    mass_point.velocity = reflection_velocity;
+    mass_point.velocity = reflection_velocity; //! not sure
   }
 
   handle_collision_with(polygon) {
