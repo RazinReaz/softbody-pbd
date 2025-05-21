@@ -24,7 +24,8 @@ class Line{
     }
 
     normal(){
-        let normal = createVector(this.q.y - this.p.y, this.p.x - this.q.x);
+        let edge = p5.Vector.sub(this.q, this.p);
+        let normal = createVector(-edge.y, edge.x)
         return normal.normalize();
     }
 

@@ -3,7 +3,7 @@ function polygon_points(x, y, n, radius){
     let a = 2 * PI / n;
     for (let i = 0; i < n; i++){
         let r =  random(1, 2);
-        points.push(createVector(x + r * radius * cos(i * a), y + r * radius * sin(i * a)));
+        points.push(createVector(x + r * radius * cos(i * a), y - r * radius * sin(i * a)));
     }
     return points;
 }
@@ -56,21 +56,21 @@ class Polygon{
         // pop()
     }
 
-    collides_with(mass_point){
+    collides_with(mass_point_position){
         // check if the mass point is inside the bounding box
-        if (mass_point.position.x > this.max_x || mass_point.position.x < this.min_x || mass_point.position.y > this.max_y || mass_point.position.y < this.min_y)
+        if (mass_point_position.x > this.max_x || mass_point_position.x < this.min_x || mass_point_position.y > this.max_y || mass_point_position.y < this.min_y)
             return false;
         // check if the mass point is inside the polygon
         let count = 0;
         for (let line of this.lines){
-            if (line.min_y > mass_point.position.y || mass_point.position.y > line.max_y)
+            if (line.min_y > mass_point_position.y || mass_point_position.y > line.max_y)
                 continue;
             
             // horizontal line that hits the mass point also intersects the polygon line
             // calculate the x of the intersection point
             // x - x1 = (x2 - x1) * (y - y1) / (y2 - y1) 
-            let x = (line.q.x - line.p.x) * (mass_point.position.y - line.p.y) / (line.q.y - line.p.y) + line.p.x;
-            if (x < mass_point.position.x)
+            let x = (line.q.x - line.p.x) * (mass_point_position.y - line.p.y) / (line.q.y - line.p.y) + line.p.x;
+            if (x < mass_point_position.x)
                 count++;
         }
         return count % 2 == 1;
@@ -90,16 +90,19 @@ class Polygon{
     }
 
     
-    get_reflection_point_and_normal(mass_point){
-        let closest_line = this.get_closest_line(mass_point.position);
-
+    get_reflection_point_and_normal(predictedPosition){
+        let closestLine = this.get_closest_line(predictedPosition);
+        let closestPoint = closestLine.closest_point_on_line_from(predictedPosition)
+        let distance = p5.Vector.sub(closestPoint, predictedPosition).mag() //! is this normal pointing away from the polygon?
+        let n_hat = closestLine.normal();
         return {
-            point : closest_line.closest_point_on_line_from(mass_point.position),
-            normal : closest_line.normal()
+            point : closestPoint,
+            dist: distance,
+            normal : n_hat
         };
     }
 
-    debug_alert(){
+    debugAlert(){
         fill('red');
         beginShape();
         for (let point of this.points){

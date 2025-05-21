@@ -1,8 +1,10 @@
-const DELTA_TIME = 0.05;
+const GRAVITY_CONSTANT = 0.0001;
+const BOUNCE_CONSTANT = 0.1 // has to be between 0.0 and 1.0
+const SLIDE_CONSTANT = 0.1 // has to be between 0.0 and 1.0
+const FRICTION_CONSTANT = 0.98;
+const SOLVER_ITERATIONS = 1;
 
-const GRAVITY_CONSTANT = 0.2;
-
-const MASSPOINT_MASS = 1;
+const MASSPOINT_MASS = 20;
 const MASSPOINT_RADIUS = 5;
 
 

@@ -1,10 +1,9 @@
 class Spring{
-    constructor(mass_pointA, mass_pointB, resting_length, spring_constant = SPRING_SPRING_CONSTANT, damping_constant = SPRING_DAMPING_CONSTANT){
+    constructor(mass_pointA, mass_pointB, resting_length, visible = true){
         this.A = mass_pointA;
         this.B = mass_pointB;
         this.resting_length = resting_length;
-        this.spring_constant = spring_constant;
-        this.damping_constant = damping_constant;
+        this.visible = visible;
     }
     show(){
         // let n = 7;
@@ -26,12 +25,12 @@ class Spring{
         // pop();
 
 
+        if (!this.visible) return;
+
         push()
         stroke(200)
         line(this.A.position.x, this.A.position.y, this.B.position.x, this.B.position.y);
         pop()
-        this.A.show();
-        this.B.show();
     }
 
     get_length() {
