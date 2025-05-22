@@ -43,7 +43,7 @@ class Soft_body {
         let m1 = this.masses[i];
         let m2 = this.masses[(i+offset) % this.masses.length];
         let d = dist(m1.position.x, m1.position.y, m2.position.x, m2.position.y);
-        this.springs.push(new Spring(m1, m2, d))
+        this.springs.push(new Spring(m1, m2, d, false))
       }
     } 
 
@@ -123,17 +123,16 @@ class Soft_body {
     for (let polygon of polygons) {
       for (let i = 0; i < this.masses.length; i++) {
         let mass = this.masses[i];
-        if (!polygon.collides_with(mass.predictedPosition))
+        let {collision, collidingLine, contact} = polygon.continuousCollisionAlong(mass.position, mass.predictedPosition)
+        if (!collision)
           continue;
-
-        let { point, dist, normal } = polygon.get_reflection_point_and_normal(mass.predictedPosition);
-        let penetration = mass.radius - dist;
+        let contactPoint = createVector(contact.x, contact.y)
+        let n_hat = collidingLine.normal();
         
         collisionConstraints.push(
           {
-            contactPoint : point,
-            depth : penetration,
-            normal : normal,
+            contactPoint : contactPoint,
+            normal : n_hat,
             index: i,
           }
         )
@@ -182,18 +181,22 @@ class Soft_body {
 
   solveCollisionConstraints(constraints) {
     for (let constraint of constraints) {
-      let {contactPoint, depth, normal, index} = constraint;
-      if (depth < 0) continue;
+      
+      let {contactPoint, normal, index} = constraint;
+      // evaluate the constraint C(p) = (p - con).n - d >= 0
       let mass = this.masses[index];
+      let constraint_val = p5.Vector.sub(mass.predictedPosition, contactPoint).dot(normal) - mass.radius;
 
-      let deltax = p5.Vector.mult(normal, depth);
+      if (constraint_val >= 0) continue;
+
+      let deltax = p5.Vector.mult(normal, -1 * constraint_val);
       mass.predictedPosition.add(deltax);
 
 
-      let velocity = mass.velocity;
-      let dot_product = velocity.dot(normal);
-      let reflection_velocity = velocity.sub(normal.mult(2 * dot_product));
-      mass.velocity = reflection_velocity; //! not sure
+      // let velocity = mass.velocity;
+      // let dot_product = velocity.dot(normal);
+      // let reflection_velocity = velocity.sub(normal.mult(2 * dot_product));
+      // mass.velocity = reflection_velocity.mult(BOUNCE_CONSTANT)
 
       // let dotProduct = mass.velocity.dot(normal);
       // let v_normal = p5.Vector.mult(normal, dotProduct);

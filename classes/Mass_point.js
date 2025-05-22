@@ -20,7 +20,7 @@ class Mass_point{
         push();
         stroke(255);
         fill(200,50,50);
-        circle(this.position.x, this.position.y, this.radius);
+        circle(this.position.x, this.position.y, 2*this.radius);
         pop();
     }
 

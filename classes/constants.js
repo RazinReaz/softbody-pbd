@@ -1,8 +1,8 @@
-const GRAVITY_CONSTANT = 0.0001;
+const GRAVITY_CONSTANT = 0.00005;
 const BOUNCE_CONSTANT = 0.1 // has to be between 0.0 and 1.0
 const SLIDE_CONSTANT = 0.1 // has to be between 0.0 and 1.0
 const FRICTION_CONSTANT = 0.98;
-const SOLVER_ITERATIONS = 1;
+const SOLVER_ITERATIONS = 5;
 
 const MASSPOINT_MASS = 20;
 const MASSPOINT_RADIUS = 5;
@@ -13,4 +13,4 @@ const SPRING_DAMPING_CONSTANT = 40;
 
 const SPRING_SHOW_STROKEWEIGHT = 2;
 
-const SOFT_BODY_SIZE = 15;
+const SOFT_BODY_SIZE = 10;

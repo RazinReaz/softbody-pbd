@@ -12,9 +12,9 @@ let pause = false;
 function setup() {
   createCanvas(800, 600);
   // frameRate(5);
-  softBody = new Soft_body(400, 100, 6, 5);
+  softBody = new Soft_body(400, 100, 7, 5);
   floor = new Polygon([createVector(0, height), createVector(width, height), createVector(width, height - 20), createVector(0, height - 20)]);
-  left = new Polygon([createVector(0, 0), createVector(20, 0), createVector(20, height), createVector(0, height)]);
+  left = new Polygon([createVector(0, 0), createVector(20, 0), createVector(100, height), createVector(80, height)]);
   right = new Polygon([createVector(width - 20, 0), createVector(width, 0), createVector(width, height), createVector(width - 20, height)]);
   polygons.push(new Polygon(300, 400, 7));
   polygons.push(new Polygon(500, 250, 4));
@@ -35,9 +35,11 @@ function draw() {
   
   // calculate the predicted postions of all particles
   softBody.projectPosition(deltaTime);
+  for (let polygon of polygons){
+    polygon.show();
+  }
 
   collisionConstraints = softBody.generatePolygonConstraints(polygons);
-
   // solve step
   for (let i=0; i < SOLVER_ITERATIONS; i++) {
     // solve all constraints
@@ -45,13 +47,29 @@ function draw() {
     softBody.solveCollisionConstraints(collisionConstraints);
   }
   
+  // if (collisionConstraints.length > 0) {
+  //   console.log(collisionConstraints);
+  //   for (let c of collisionConstraints) {
+  //     let mass = softBody.masses[c.index]
+  //     console.log(mass.position.x, mass.position.y);
+  //     console.log(mass.predictedPosition.x, mass.predictedPosition.y);
+  //     push()
+  //     fill('blue')
+  //     circle(mass.position.x, mass.position.y, 5)
+  //     fill('red')
+  //     circle(mass.predictedPosition.x, mass.predictedPosition.y, 5)
+  //     pop()
+  //   }
+  //   noLoop()
+  // }
+
+  
+  
 
   //post-solve step
   softBody.updateVelocity(deltaTime);
   softBody.updatePosition();
-  for (let polygon of polygons){
-    polygon.show();
-  }
+
   // softBody.update();
   // noLoop()
 }
