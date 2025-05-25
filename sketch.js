@@ -3,43 +3,39 @@ let floor;
 let left;
 let right;
 let polygons = [];
-let s;
 
 let pause = false;
 
-
-
 function setup() {
   createCanvas(800, 600);
-  // frameRate(5);
-  softBody = new Soft_body(400, 100, 7, 5);
-  floor = new Polygon([createVector(0, height), createVector(width, height), createVector(width, height - 20), createVector(0, height - 20)]);
-  left = new Polygon([createVector(0, 0), createVector(20, 0), createVector(100, height), createVector(80, height)]);
-  right = new Polygon([createVector(width - 20, 0), createVector(width, 0), createVector(width, height), createVector(width - 20, height)]);
-  polygons.push(new Polygon(300, 400, 7));
-  polygons.push(new Polygon(400, 250, 4));
+  softBody = new Soft_body(450, 10, 15, 12);
+  floor = new Polygon([createVector(0, height - 50), createVector(width, height - 50), createVector(width, height - 70), createVector(0, height - 70)]);
+  left = new Polygon([createVector(0, 0), createVector(80, height), createVector(100, height), createVector(20, 0)]);
+  right = new Polygon([createVector(width - 20, 0), createVector(width - 20, height), createVector(width, height), createVector(width, 0)]);
+  polygons.push(new Polygon(500, 150, 9));
+  polygons.push(new Polygon(200, 300, 7));
+  polygons.push(new Polygon(500, 400, 5));
   polygons.push(floor);
   polygons.push(left);
   polygons.push(right);
 
-  // s = new Spring(new Mass_point(100, 100, 1), new Mass_point(110, 250, 1), 30);
 }
 
 function draw() {
   // frameRate(1);
   background(51);
-  softBody.show();
-  // noLoop();
+  
   
   // apply all external forces on all particles
   softBody.applyGravity(GRAVITY_CONSTANT, deltaTime);
+  softBody.dampVelocity(DAMPING);
   
   // calculate the predicted postions of all particles
   softBody.projectPosition(deltaTime);
   for (let polygon of polygons){
     polygon.show();
   }
-
+  
   collisionConstraints = softBody.generatePolygonConstraints(polygons);
   // solve step
   for (let i=0; i < SOLVER_ITERATIONS; i++) {
@@ -48,6 +44,7 @@ function draw() {
     softBody.solveCollisionConstraints(collisionConstraints);
   }
   
+  softBody.show();
   // if (collisionConstraints.length > 0) {
   //   console.log(collisionConstraints);
   //   for (let c of collisionConstraints) {
@@ -64,13 +61,19 @@ function draw() {
   //   noLoop()
   // }
 
-  
-  
+  // let flag = false;
+  // for (let mass of softBody.masses) {
+  //   if (floor.collisionAlong(mass.position, mass.predictedPosition).collision) {
+  //     flag = true;
+  //   }
+  // }
+  // if (flag) {
+  //   noLoop()
+  // }
 
   //post-solve step
   softBody.updateVelocity(deltaTime);
   softBody.updatePosition();
 
-  // softBody.update();
-  // noLoop()
+  softBody.updateCollidingMassVelocity(collisionConstraints, RESTITUTION, FRICTION);
 }

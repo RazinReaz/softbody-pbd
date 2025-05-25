@@ -8,26 +8,13 @@ class Mass_point{
         this.predictedPosition = createVector(0,0);
     }
 
-    calculate_gravity(){
-        return createVector(0, GRAVITY_CONSTANT * this.mass);
-    }
-
-    set_force_to_zero(){
-        this.force = createVector(0, 0);
-    }
-
     show(){
         push();
-        stroke(255);
+        // stroke(255);
+        noStroke()
         fill(200,50,50);
-        circle(this.position.x, this.position.y, 2*this.radius);
+        circle(this.position.x, this.position.y, 2 * this.radius);
         pop();
     }
 
-    update() {
-        let acceleration = this.force.mult(this.w);
-        let del_vel = p5.Vector.mult(acceleration, DELTA_TIME);
-        this.velocity.add(del_vel);
-        this.position.add(this.velocity);
-    }
 }

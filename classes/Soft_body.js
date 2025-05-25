@@ -43,7 +43,7 @@ class Soft_body {
         let m1 = this.masses[i];
         let m2 = this.masses[(i+offset) % this.masses.length];
         let d = dist(m1.position.x, m1.position.y, m2.position.x, m2.position.y);
-        this.springs.push(new Spring(m1, m2, d))
+        this.springs.push(new Spring(m1, m2, d, false))
       }
     } 
 
@@ -102,8 +102,14 @@ class Soft_body {
   show() {
     for (let spring of this.springs) 
       spring.show();
-    for (let mass of this.masses) 
+    for (let mass of this.masses){
       mass.show();
+      push();
+      noFill();
+      stroke(255);
+      circle(mass.predictedPosition.x, mass.predictedPosition.y, 5);
+      pop();
+    } 
   }
 
 
@@ -127,10 +133,10 @@ class Soft_body {
         if (!collision)
           continue;
         // push();
-        // fill('blue');
+        // fill('yellow');
         // circle(mass.position.x, mass.position.y, 2*mass.radius);
         // noFill();
-        // stroke('red')
+        // stroke('blue')
         // circle(mass.predictedPosition.x, mass.predictedPosition.y, 3);
         // stroke(255)
         // circle(contact.x, contact.y, 3);
@@ -152,10 +158,16 @@ class Soft_body {
     return collisionConstraints;
   }
 
-  applyGravity(gravity_constant, deltaTime) {
-    let gravity_vector = createVector(0, gravity_constant)
+  applyGravity(gravityConstant, deltaTime) {
+    let gravityVector = createVector(0, gravityConstant)
     for (let mass of this.masses) {
-      mass.velocity.add(p5.Vector.mult(gravity_vector, deltaTime));
+      mass.velocity.add(p5.Vector.mult(gravityVector, deltaTime * mass.w));
+    }
+  }
+
+  dampVelocity(dampingConstant) {
+    for (let mass of this.masses) {
+      mass.velocity.mult(dampingConstant);
     }
   }
 
@@ -191,6 +203,7 @@ class Soft_body {
   }
 
   solveCollisionConstraints(constraints) {
+
     for (let constraint of constraints) {
       
       let {contactPoint, normal, index} = constraint;
@@ -199,15 +212,14 @@ class Soft_body {
       let constraint_val = p5.Vector.sub(mass.predictedPosition, contactPoint).dot(normal) - mass.radius;
 
       if (constraint_val >= 0) continue;
-
-      let deltax = p5.Vector.mult(normal, -1 * (constraint_val + EPSILON)* mass.m);
+      let deltax = p5.Vector.mult(normal, -1 * (constraint_val + EPSILON) * mass.w);
       mass.predictedPosition.add(deltax);
 
 
-      let velocity = mass.velocity;
-      let dot_product = velocity.dot(normal);
-      let reflection_velocity = velocity.sub(normal.mult(2 * dot_product));
-      mass.velocity = reflection_velocity.mult(BOUNCE_CONSTANT)
+      // let velocity = mass.velocity;
+      // let dot_product = velocity.dot(normal);
+      // let reflection_velocity = velocity.sub(normal.mult(2 * dot_product));
+      // mass.velocity = reflection_velocity.mult(BOUNCE_CONSTANT)
 
       // let dotProduct = mass.velocity.dot(normal);
       // let v_normal = p5.Vector.mult(normal, dotProduct);
@@ -222,13 +234,39 @@ class Soft_body {
     for (let mass of this.masses) {
       let deltax = p5.Vector.sub(mass.predictedPosition, mass.position);
       mass.velocity = p5.Vector.div(deltax, deltaTIme);
-      mass.velocity.mult(FRICTION_CONSTANT);
     }
   }
 
   updatePosition() {
     for (let mass of this.masses) {
       mass.position = mass.predictedPosition;
+    }
+  }
+
+  updateCollidingMassVelocity(constraints, restitution, friction) {
+    for (let constraint of constraints) {
+      let {contactPoint, normal, index} = constraint;
+      // evaluate the constraint C(p) = (p - con).n - d >= 0
+      let mass = this.masses[index];
+
+      let dotProduct = mass.velocity.dot(normal);
+      let v_normal = p5.Vector.mult(normal, dotProduct);
+      let v_tangent = p5.Vector.sub(mass.velocity, v_normal);
+
+      if (dotProduct < 0) {
+        v_normal.mult(-restitution);
+      }
+
+      let len_v_t = v_tangent.mag()
+      let frictionMagnitude = Math.max(0, 1 - friction * Math.abs(dotProduct) / len_v_t);
+      v_tangent.mult(frictionMagnitude)
+
+      mass.velocity = p5.Vector.add(v_normal, v_tangent);
+
+      // mass.velocity = p5.Vector.mult(v_normal, BOUNCE_CONSTANT);
+      // mass.velocity.add(p5.Vector.mult(v_tangent, SLIDE_CONSTANT));
+
+      
     }
   }
 }
