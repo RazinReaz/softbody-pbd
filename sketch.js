@@ -17,7 +17,7 @@ function setup() {
   left = new Polygon([createVector(0, 0), createVector(20, 0), createVector(100, height), createVector(80, height)]);
   right = new Polygon([createVector(width - 20, 0), createVector(width, 0), createVector(width, height), createVector(width - 20, height)]);
   polygons.push(new Polygon(300, 400, 7));
-  polygons.push(new Polygon(500, 250, 4));
+  polygons.push(new Polygon(400, 250, 4));
   polygons.push(floor);
   polygons.push(left);
   polygons.push(right);
@@ -26,6 +26,7 @@ function setup() {
 }
 
 function draw() {
+  // frameRate(1);
   background(51);
   softBody.show();
   // noLoop();
