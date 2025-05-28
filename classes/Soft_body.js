@@ -1,19 +1,27 @@
 class Soft_body {
   // for now the soft body is a recatangle.
   // we will build other shapes later
-  constructor(positionx, positiony, width, height) {
+  constructor(positionx, positiony, width, height, springStiffness, solverIterations) {
     // create the structure
     this.springs = [];
     this.masses = [];
+    this.collisionConstraints = [];
+    this.mouseSprings = [];
+
     let currentPos = {
       x : positionx,
       y : positiony
     }
+    this.solverIterations = solverIterations;
+    this.stiffnessMultiplier = 1 - Math.pow((1 - springStiffness), 1 / solverIterations)
+
+
     for (let i = 0; i < width; i++) {
       this.masses.push(new Mass_point(currentPos.x, currentPos.y, MASSPOINT_MASS));
       currentPos.x += SOFT_BODY_SIZE;
     } 
     currentPos.x -= SOFT_BODY_SIZE;
+    
     
     for (let i = 0; i < height - 1; i++) {
       currentPos.y += SOFT_BODY_SIZE;
@@ -35,7 +43,7 @@ class Soft_body {
       let m1 = this.masses[i];
       let m2 = this.masses[(i+1) % this.masses.length];
       let d = dist(m1.position.x, m1.position.y, m2.position.x, m2.position.y);
-      this.springs.push(new Spring(m1, m2, d))
+      this.springs.push(new Spring(m1, m2, d, this.stiffnessMultiplier))
     }
 
     for (let offset = width, k = 0; k < 2; offset++, k++){
@@ -43,7 +51,7 @@ class Soft_body {
         let m1 = this.masses[i];
         let m2 = this.masses[(i+offset) % this.masses.length];
         let d = dist(m1.position.x, m1.position.y, m2.position.x, m2.position.y);
-        this.springs.push(new Spring(m1, m2, d, false))
+        this.springs.push(new Spring(m1, m2, d, this.stiffnessMultiplier))
       }
     } 
 
@@ -99,33 +107,30 @@ class Soft_body {
 
   }
 
+  reset() {
+    this.mouseSprings.length = 0; // reset the array in place
+  }
+
   show() {
     for (let spring of this.springs) 
       spring.show();
-    for (let mass of this.masses){
+    for (let spring of this.mouseSprings) 
+      spring.show();
+    for (let mass of this.masses)
       mass.show();
+    for (let constraint of this.collisionConstraints) {
+      let mass = this.masses[constraint.index];
       push();
-      noFill();
-      stroke(255);
+      fill('blue')
+      circle(mass.position.x, mass.position.y, 2*mass.radius);
       circle(mass.predictedPosition.x, mass.predictedPosition.y, 5);
       pop();
     } 
   }
 
 
-  bounce(mass_point, reflection_point, normal) {
-    // move the mass point
-    mass_point.position = reflection_point;
-    // update the mass point velocity
-    let velocity = mass_point.velocity;
-    let dot_product = velocity.dot(normal);
-    let reflection_velocity = velocity.sub(normal.mult(2 * dot_product));
-    mass_point.velocity = reflection_velocity; //! not sure
-  }
-
-
-  generatePolygonConstraints(polygons) {
-    let collisionConstraints = [];
+  generateCollisionConstraints(polygons) {
+    this.collisionConstraints = [];
     for (let polygon of polygons) {
       for (let i = 0; i < this.masses.length; i++) {
         let mass = this.masses[i];
@@ -146,7 +151,7 @@ class Soft_body {
         let contactPoint = createVector(contact.x, contact.y)
         let n_hat = collidingLine.normal();
         
-        collisionConstraints.push(
+        this.collisionConstraints.push(
           {
             contactPoint : contactPoint,
             normal : n_hat,
@@ -155,14 +160,32 @@ class Soft_body {
         )
       }
     }
-    return collisionConstraints;
   }
 
-  applyGravity(gravityConstant, deltaTime) {
-    let gravityVector = createVector(0, gravityConstant)
+  applyExternalForce(eForceX, eForceY, deltaTime) {
+    let forceVector = createVector(eForceX, eForceY);
     for (let mass of this.masses) {
-      mass.velocity.add(p5.Vector.mult(gravityVector, deltaTime * mass.w));
+      mass.velocity.add(p5.Vector.mult(forceVector, deltaTime * mass.w))
     }
+  }
+
+  applyMouseInteractionForce(mx, my, interactionRadius, mvx, mvy, deltaTime) {
+    if (interactionRadius == 0)
+      return;
+
+    for (let mass of this.masses) {
+      // calculate distance from mass and mouse
+      let d = dist(mx, my, mass.position.x, mass.position.y)
+      if (d > interactionRadius) continue;
+
+      //mass is inside the circle of influence
+      console.log("influencing!");
+      let mouseMass = new Mass_point(mx, my, 10);
+      let spring = new Spring(mouseMass, mass, d, 1);
+      this.mouseSprings.push(spring);
+    }
+    console.log(this.mouseSprings)
+    // noLoop()
   }
 
   dampVelocity(dampingConstant) {
@@ -178,33 +201,36 @@ class Soft_body {
     }
   }
 
-  solveSpringConstraints() {
-    for (let spring of this.springs) {
-      let mass1 = spring.A;
-      let mass2 = spring.B;
-      let p1 = mass1.predictedPosition;
-      let p2 = mass2.predictedPosition;
+  #solveSingleSpringConstraint(spring) {
+    let mass1 = spring.A;
+    let mass2 = spring.B;
+    let p1 = mass1.predictedPosition;
+    let p2 = mass2.predictedPosition;
+    let l = spring.resting_length;
+    let vect = p5.Vector.sub(p2, p1);
+    let d = vect.mag();
+    let constraintValue = d - l;
 
-      let l = spring.resting_length;
-      let vect = p5.Vector.sub(p2, p1);
-      let d = vect.mag();
-
-      let error = d - l;
-
-      let v = p5.Vector.normalize(vect) // unit vector from p1 to p2 
-
-      let lambda = -0.2 * error / (mass1.w + mass2.w);
-      
-      let delx1 = p5.Vector.mult(v, -lambda * mass1.w);
-      let delx2 = p5.Vector.mult(v,  lambda * mass2.w);
-      mass1.predictedPosition.add(delx1);
-      mass2.predictedPosition.add(delx2)
-    }
+    let v = p5.Vector.normalize(vect) // unit vector from p1 to p2 
+    let lambda = -1.0 * constraintValue / (mass1.w + mass2.w);
+    
+    let delx1 = p5.Vector.mult(v, -lambda * mass1.w * spring.stiffness);
+    let delx2 = p5.Vector.mult(v,  lambda * mass2.w * spring.stiffness);
+    mass1.predictedPosition.add(delx1);
+    mass2.predictedPosition.add(delx2)
   }
 
-  solveCollisionConstraints(constraints) {
+  solveSpringConstraints() {
+    for (let spring of this.springs) {
+      this.#solveSingleSpringConstraint(spring);
+    }
+    for (let spring of this.mouseSprings) 
+      this.#solveSingleSpringConstraint(spring);
+  }
 
-    for (let constraint of constraints) {
+  solveCollisionConstraints() {
+
+    for (let constraint of this.collisionConstraints) {
       
       let {contactPoint, normal, index} = constraint;
       // evaluate the constraint C(p) = (p - con).n - d >= 0
@@ -243,8 +269,8 @@ class Soft_body {
     }
   }
 
-  updateCollidingMassVelocity(constraints, restitution, friction) {
-    for (let constraint of constraints) {
+  updateCollidingMassVelocity(restitution, friction) {
+    for (let constraint of this.collisionConstraints) {
       let {contactPoint, normal, index} = constraint;
       // evaluate the constraint C(p) = (p - con).n - d >= 0
       let mass = this.masses[index];

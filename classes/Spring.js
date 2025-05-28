@@ -1,8 +1,9 @@
 class Spring{
-    constructor(mass_pointA, mass_pointB, resting_length, visible = true){
+    constructor(mass_pointA, mass_pointB, resting_length, stiffness, visible = true){
         this.A = mass_pointA;
         this.B = mass_pointB;
         this.resting_length = resting_length;
+        this.stiffness = stiffness;
         this.visible = visible;
     }
     show(){
