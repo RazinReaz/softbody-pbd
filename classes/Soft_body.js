@@ -6,13 +6,12 @@ class Soft_body {
     this.springs = [];
     this.masses = [];
     this.collisionConstraints = [];
-    this.mouseSprings = [];
+    this.debug = false
 
     let currentPos = {
       x : positionx,
       y : positiony
     }
-    this.solverIterations = solverIterations;
     this.stiffnessMultiplier = 1 - Math.pow((1 - springStiffness), 1 / solverIterations)
 
 
@@ -51,7 +50,7 @@ class Soft_body {
         let m1 = this.masses[i];
         let m2 = this.masses[(i+offset) % this.masses.length];
         let d = dist(m1.position.x, m1.position.y, m2.position.x, m2.position.y);
-        this.springs.push(new Spring(m1, m2, d, this.stiffnessMultiplier))
+        this.springs.push(new Spring(m1, m2, d, this.stiffnessMultiplier, false))
       }
     } 
 
@@ -107,46 +106,39 @@ class Soft_body {
 
   }
 
-  reset() {
-    this.mouseSprings.length = 0; // reset the array in place
-  }
-
   show() {
     for (let spring of this.springs) 
       spring.show();
-    for (let spring of this.mouseSprings) 
-      spring.show();
     for (let mass of this.masses)
       mass.show();
+
+    if (!this.debug) return;
+
     for (let constraint of this.collisionConstraints) {
       let mass = this.masses[constraint.index];
+      let p = constraint.contactPoint
       push();
       fill('blue')
       circle(mass.position.x, mass.position.y, 2*mass.radius);
-      circle(mass.predictedPosition.x, mass.predictedPosition.y, 5);
+      circle(mass.predictedPosition.x, mass.predictedPosition.y, mass.radius);
+      fill('white')
+      circle(p.x, p.y, 3);
       pop();
     } 
   }
 
 
   generateCollisionConstraints(polygons) {
-    this.collisionConstraints = [];
+    this.collisionConstraints.length = 0;
     for (let polygon of polygons) {
       for (let i = 0; i < this.masses.length; i++) {
         let mass = this.masses[i];
-        let {collision, collidingLine, contact} = polygon.collisionAlong(mass.position, mass.predictedPosition)
+        let {collision, collidingLine, contact, type} = polygon.collisionAlongRay(mass.position, mass.predictedPosition)
         if (!collision)
           continue;
-        // push();
-        // fill('yellow');
-        // circle(mass.position.x, mass.position.y, 2*mass.radius);
-        // noFill();
-        // stroke('blue')
-        // circle(mass.predictedPosition.x, mass.predictedPosition.y, 3);
-        // stroke(255)
-        // circle(contact.x, contact.y, 3);
-        // pop()
-        // noLoop()
+        
+        if (this.debug)
+          console.log(type, "collision")
 
         let contactPoint = createVector(contact.x, contact.y)
         let n_hat = collidingLine.normal();
@@ -167,25 +159,6 @@ class Soft_body {
     for (let mass of this.masses) {
       mass.velocity.add(p5.Vector.mult(forceVector, deltaTime * mass.w))
     }
-  }
-
-  applyMouseInteractionForce(mx, my, interactionRadius, mvx, mvy, deltaTime) {
-    if (interactionRadius == 0)
-      return;
-
-    for (let mass of this.masses) {
-      // calculate distance from mass and mouse
-      let d = dist(mx, my, mass.position.x, mass.position.y)
-      if (d > interactionRadius) continue;
-
-      //mass is inside the circle of influence
-      console.log("influencing!");
-      let mouseMass = new Mass_point(mx, my, 10);
-      let spring = new Spring(mouseMass, mass, d, 1);
-      this.mouseSprings.push(spring);
-    }
-    console.log(this.mouseSprings)
-    // noLoop()
   }
 
   dampVelocity(dampingConstant) {
@@ -223,13 +196,14 @@ class Soft_body {
   solveSpringConstraints() {
     for (let spring of this.springs) {
       this.#solveSingleSpringConstraint(spring);
+      // push()
+      // fill('white')
+      // circle(spring.A.predictedPosition.x, spring.A.predictedPosition.y, 20)
+      // pop()
     }
-    for (let spring of this.mouseSprings) 
-      this.#solveSingleSpringConstraint(spring);
   }
 
   solveCollisionConstraints() {
-
     for (let constraint of this.collisionConstraints) {
       
       let {contactPoint, normal, index} = constraint;
@@ -290,9 +264,7 @@ class Soft_body {
       mass.velocity = p5.Vector.add(v_normal, v_tangent);
 
       // mass.velocity = p5.Vector.mult(v_normal, BOUNCE_CONSTANT);
-      // mass.velocity.add(p5.Vector.mult(v_tangent, SLIDE_CONSTANT));
-
-      
+      // mass.velocity.add(p5.Vector.mult(v_tangent, SLIDE_CONSTANT));      
     }
   }
 }

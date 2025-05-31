@@ -2,7 +2,7 @@ function polygon_points(x, y, n, radius){
     let points = [];
     let a = 2 * PI / n;
     for (let i = 0; i < n; i++){
-        let r =  random(1, 2);
+        let r =  random(1,2);
         points.push(createVector(x + r * radius * cos(i * a), y - r * radius * sin(i * a)));
     }
     return points;
@@ -177,7 +177,7 @@ class Polygon{
         return count % 2 == 1;
     }
 
-    collisionAlong(position, predictedPosition) {
+    collisionAlongRay(position, predictedPosition) {
         if (
             Math.max(position.x, predictedPosition.x) < this.min_x ||
             Math.min(position.x, predictedPosition.x) > this.max_x ||
@@ -187,22 +187,22 @@ class Polygon{
             return {
                 collision: false,
                 collidingLine: null,
-                contact: null
+                contact: null,
+                type: "none"
             };
         
         // check if the ray from position to predictedPosition lies completely inside the polygon
         let pos_inside = this.surrounds(position);
         let pred_inside = this.surrounds(predictedPosition);
         if (pos_inside && pred_inside) {
-            // noLoop();
             // continuous collision failed, do static collision
-            // console.log("Static collision")
             let closest_line = this.get_closest_line(predictedPosition);
             let contact = closest_line.closest_point_on_line_from(predictedPosition);
             return {
                 collision : true,
                 collidingLine : closest_line,
-                contact : contact
+                contact : contact,
+                type: "static"
             }
         }
         
@@ -262,14 +262,16 @@ class Polygon{
             return {
                 collision: false,
                 collidingLine: null,
-                contact: null
+                contact: null,
+                type: "none"
             };
         } else {
                 // console.log("continuous collision")
                 return {
                     collision: true,
                     collidingLine: collidingLine,
-                    contact: contact
+                    contact: contact,
+                    type: "continuous"
                 };
         }
     }

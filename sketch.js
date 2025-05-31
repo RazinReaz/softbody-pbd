@@ -10,29 +10,38 @@ let mouseInteractionRadius = 0;
 
 function setup() {
   createCanvas(800, 600);
-  softBody = new Soft_body(350, 10, 15, 13, SPRINT_CONSTRAINT_STIFFNESS, SOLVER_ITERATIONS);
-  floor = new Polygon([createVector(0, height - 50), createVector(width, height - 50), createVector(width, height - 70), createVector(0, height - 70)]);
-  left = new Polygon([createVector(0, 0), createVector(80, height), createVector(100, height), createVector(20, 0)]);
-  right = new Polygon([createVector(width - 20, 0), createVector(width - 20, height), createVector(width, height), createVector(width, 0)]);
+  softBody = new Soft_body(350, 10, 10, 7, SPRINT_CONSTRAINT_STIFFNESS, SOLVER_ITERATIONS);
+  floor = new Polygon([createVector(0, height - 50), createVector(width, height - 50), createVector(width, height - 50 - 50), createVector(0, height - 50 - 50)]);
+  left = new Polygon([createVector(0, 0), createVector(50, height), createVector(100, height), createVector(50, 0)]);
+  right = new Polygon([createVector(width - 150, 0), createVector(width - 150, height), createVector(width-80, height), createVector(width-80, 0)]);
   polygons.push(new Polygon(500, 150, 9));
   polygons.push(new Polygon(100, 300, 7));
-  polygons.push(new Polygon(500, 400, 5));
+  polygons.push(new Polygon(350, 400, 4));
   polygons.push(floor);
   polygons.push(left);
   polygons.push(right);
-
 }
 
+let dt = 10;
+
 function draw() {
-  // frameRate(1);
+  // frameRate(0.2);
   background(51);
-  softBody.reset();
+  push();
+    noStroke();
+    fill(201);
+    textAlign(CENTER, TOP);
+    textFont('Product Sans');
+    textSize(15);    
+    text("Click and drag with mouse to interact with the softbody", width / 2, 30);
+  pop();
+
+
   if (mouseIsPressed && mouseButton === LEFT) {
-    mouseInteractionRadius = MAX_MOUSE_INTERACTION_RADIUS;
     mvx = (mouseX - pmouseX) * MOUSE_FORCE_MULTPLIER;
     mvy = (mouseY - pmouseY) * MOUSE_FORCE_MULTPLIER;
+
   } else {
-    mouseInteractionRadius = 0;
     mvx = 0;
     mvy = 0;
   }
@@ -41,30 +50,33 @@ function draw() {
   fill(200, 0, 200, 150);
   circle(mouseX, mouseY, 2 * mouseInteractionRadius);
   pop()
+
+  dt = deltaTime
   
   
   // apply all external forces on all particles
-  softBody.applyExternalForce(0, GRAVITY_FORCE_Y, deltaTime);
-  // softBody.applyExternalForce(mvx, mvy, deltaTime)
-  // softBody.applyMouseInteractionForce(mouseX, mouseY, mouseInteractionRadius, mvx, mvy, deltaTime)
-
+  softBody.applyExternalForce(0, GRAVITY_FORCE_Y, dt);
+  // softBody.applyExternalForce(10, 15, dt)
+  softBody.applyExternalForce(mvx, mvy, dt);
   softBody.dampVelocity(DAMPING);
   
   // calculate the predicted postions of all particles
-  softBody.projectPosition(deltaTime);
+  softBody.projectPosition(dt);
+
   for (let polygon of polygons){
     polygon.show();
   }
   
   softBody.generateCollisionConstraints(polygons);
+  softBody.show();
   // solve step
   for (let i=0; i < SOLVER_ITERATIONS; i++) {
     // solve all constraints
     softBody.solveSpringConstraints();
     softBody.solveCollisionConstraints();
   }
+  // softBody.show();
   
-  softBody.show();
   // if (collisionConstraints.length > 0) {
   //   console.log(collisionConstraints);
   //   for (let c of collisionConstraints) {
@@ -92,7 +104,7 @@ function draw() {
   // }
 
   //post-solve step
-  softBody.updateVelocity(deltaTime);
+  softBody.updateVelocity(dt);
   softBody.updatePosition();
 
   softBody.updateCollidingMassVelocity(RESTITUTION, FRICTION);
