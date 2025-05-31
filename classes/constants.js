@@ -1,4 +1,4 @@
-const GRAVITY_FORCE_Y = 0.015;
+const GRAVITY_FORCE_Y = 0.01;
 const RESTITUTION = 0.5 // has to be between 0.0 and 1.0
 const FRICTION = 0.5 // has to be between 0.0 and 1.0
 const DAMPING = 0.99;
