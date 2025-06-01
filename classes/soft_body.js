@@ -1,3 +1,19 @@
+
+const SoftBodyShowMethod = {
+  RIG: 0,
+  SURFACE: 1,
+  CONCAVE_HULL: 2,
+  MARCHING_SQUARES: 3
+  // Add more methods as needed in the future
+};
+
+const SoftBodyRigMethod = {
+  DOUBLE: 0,
+  PERIMETER: 1,
+  GRID: 2
+}
+
+
 class Soft_body {
   // for now the soft body is a recatangle.
   // we will build other shapes later
@@ -5,112 +21,250 @@ class Soft_body {
     // create the structure
     this.springs = [];
     this.masses = [];
+    this.width = width;
+    this.height = height;
     this.collisionConstraints = [];
     this.debug = false;
-
+    this.stiffnessMultiplier = 1 - Math.pow((1 - springStiffness), 1 / solverIterations)
+    this.showMethod = SoftBodyShowMethod.SURFACE;
+    this.rigMethod = SoftBodyRigMethod.GRID;
+    
+    // for performance issues
+    this._tmpContactPoint = createVector(0, 0);
+    this._tempCollisionPminusQs = createVector(0, 0);
+    this._tempCollisionDeltaX = createVector(0, 0);
+    this._forceVector = createVector(0, 0);
+    this._tempInGeneral = createVector(0, 0);
+    this._tempInGeneral2 = createVector(0, 0);
+    
     let currentPos = {
       x : positionx,
       y : positiony
     }
-    this.stiffnessMultiplier = 1 - Math.pow((1 - springStiffness), 1 / solverIterations)
 
+    if (this.rigMethod === SoftBodyRigMethod.PERIMETER) {
 
-    for (let i = 0; i < width; i++) {
-      this.masses.push(new Mass_point(currentPos.x, currentPos.y, MASSPOINT_MASS));
-      currentPos.x += SOFT_BODY_SIZE;
-    } 
-    currentPos.x -= SOFT_BODY_SIZE;
-    
-    
-    for (let i = 0; i < height - 1; i++) {
-      currentPos.y += SOFT_BODY_SIZE;
-      this.masses.push(new Mass_point(currentPos.x, currentPos.y, MASSPOINT_MASS));
-    } 
-    
-    for (let i = 0; i < width - 1; i++) {
+      for (let i = 0; i < width; i++) {
+        this.masses.push(new Mass_point(currentPos.x, currentPos.y, MASSPOINT_MASS));
+        currentPos.x += SOFT_BODY_SIZE;
+      } 
       currentPos.x -= SOFT_BODY_SIZE;
-      this.masses.push(new Mass_point(currentPos.x, currentPos.y, MASSPOINT_MASS));
-    } 
-    
-    for (let i = 0; i < height - 2; i++) {
-      currentPos.y -= SOFT_BODY_SIZE;
-      this.masses.push(new Mass_point(currentPos.x, currentPos.y, MASSPOINT_MASS));
-    } 
-
-    // perimeter springs
-    for (let i = 0; i < this.masses.length; i++) {
-      let m1 = this.masses[i];
-      let m2 = this.masses[(i+1) % this.masses.length];
-      let d = dist(m1.position.x, m1.position.y, m2.position.x, m2.position.y);
-      this.springs.push(new Spring(m1, m2, d, this.stiffnessMultiplier))
-    }
-
-    for (let offset = width, k = 0; k < 2; offset++, k++){
+      
+      
+      for (let i = 0; i < height - 1; i++) {
+        currentPos.y += SOFT_BODY_SIZE;
+        this.masses.push(new Mass_point(currentPos.x, currentPos.y, MASSPOINT_MASS));
+      } 
+      
+      for (let i = 0; i < width - 1; i++) {
+        currentPos.x -= SOFT_BODY_SIZE;
+        this.masses.push(new Mass_point(currentPos.x, currentPos.y, MASSPOINT_MASS));
+      } 
+      
+      for (let i = 0; i < height - 2; i++) {
+        currentPos.y -= SOFT_BODY_SIZE;
+        this.masses.push(new Mass_point(currentPos.x, currentPos.y, MASSPOINT_MASS));
+      } 
+  
+      // perimeter springs
       for (let i = 0; i < this.masses.length; i++) {
         let m1 = this.masses[i];
-        let m2 = this.masses[(i+offset) % this.masses.length];
+        let m2 = this.masses[(i+1) % this.masses.length];
         let d = dist(m1.position.x, m1.position.y, m2.position.x, m2.position.y);
         this.springs.push(new Spring(m1, m2, d, this.stiffnessMultiplier))
       }
-    } 
+  
+      for (let offset = width, k = 0; k < 2; offset++, k++){
+        for (let i = 0; i < this.masses.length; i++) {
+          let m1 = this.masses[i];
+          let m2 = this.masses[(i+offset+k) % this.masses.length];
+          let d = dist(m1.position.x, m1.position.y, m2.position.x, m2.position.y);
+          this.springs.push(new Spring(m1, m2, d, this.stiffnessMultiplier * (width * SOFT_BODY_SIZE / d) * 0.3)) //! experimental
+        }
+      } 
 
-    // rig springs
+    } else if (this.rigMethod === SoftBodyRigMethod.DOUBLE) {
+      for (let i = 0; i < width; i++) {
+        this.masses.push(new Mass_point(currentPos.x, currentPos.y, MASSPOINT_MASS));
+        currentPos.x += SOFT_BODY_SIZE;
+      } 
+      currentPos.x -= SOFT_BODY_SIZE;
+      for (let i = 0; i < height - 1; i++) {
+        currentPos.y += SOFT_BODY_SIZE;
+        this.masses.push(new Mass_point(currentPos.x, currentPos.y, MASSPOINT_MASS));
+      } 
+      for (let i = 0; i < width - 1; i++) {
+        currentPos.x -= SOFT_BODY_SIZE;
+        this.masses.push(new Mass_point(currentPos.x, currentPos.y, MASSPOINT_MASS));
+      } 
+      for (let i = 0; i < height - 2; i++) {
+        currentPos.y -= SOFT_BODY_SIZE;
+        this.masses.push(new Mass_point(currentPos.x, currentPos.y, MASSPOINT_MASS));
+      } 
+      
+      // perimeter springs
+      for (let i = 0; i < this.masses.length; i++) {
+        let m1 = this.masses[i];
+        let m2 = this.masses[(i+1) % this.masses.length];
+        let d = dist(m1.position.x, m1.position.y, m2.position.x, m2.position.y);
+        this.springs.push(new Spring(m1, m2, d, this.stiffnessMultiplier))
+      }
+      // perimeter springs strengthening
+      for (let offset = 5, k = 0; k < 3; offset++, k++){
+        for (let i = 0; i < this.masses.length; i++) {
+          let m1 = this.masses[i];
+          let m2 = this.masses[(i+offset + k) % this.masses.length];
+          let d = dist(m1.position.x, m1.position.y, m2.position.x, m2.position.y);
+          this.springs.push(new Spring(m1, m2, d, this.stiffnessMultiplier))
+        }
+      } 
+      let innerSize = 0.5;
+      const innerBodySize = SOFT_BODY_SIZE * innerSize
+      currentPos = {
+        x: positionx + width * (1 - innerSize) * 0.5 * SOFT_BODY_SIZE,
+        y: positiony + height * (1 - innerSize) * 0.5 * SOFT_BODY_SIZE,
+      }
+      let tempOffset = this.masses.length;
+      for (let i = 0; i < width; i++) {
+        this.masses.push(new Mass_point(currentPos.x, currentPos.y, MASSPOINT_MASS));
+        currentPos.x += innerBodySize;
+      } 
+      currentPos.x -= innerBodySize;
+      
+      for (let i = 0; i < height - 1; i++) {
+        currentPos.y += innerBodySize;
+        this.masses.push(new Mass_point(currentPos.x, currentPos.y, MASSPOINT_MASS));
+      } 
+      
+      for (let i = 0; i < width - 1; i++) {
+        currentPos.x -= innerBodySize;
+        this.masses.push(new Mass_point(currentPos.x, currentPos.y, MASSPOINT_MASS));
+      } 
+      
+      for (let i = 0; i < height - 2; i++) {
+        currentPos.y -= innerBodySize;
+        this.masses.push(new Mass_point(currentPos.x, currentPos.y, MASSPOINT_MASS));
+      } 
+      // inner springs
+      for (let i = tempOffset; i < this.masses.length; i++) {
+        let m1 = this.masses[i];
+        let m2 = this.masses[(i+1) % this.masses.length];
+        let d = dist(m1.position.x, m1.position.y, m2.position.x, m2.position.y);
+        this.springs.push(new Spring(m1, m2, d, this.stiffnessMultiplier))
+      }
+      // inner springs strengthening
+      for (let offset = 3, k = 0; k < 5; offset++, k++){
+        for (let i = 0; i < this.masses.length - tempOffset; i++) {
+          let m1 = this.masses[tempOffset + i];
+          let m2 = this.masses[(tempOffset + i + offset + k) % tempOffset + tempOffset];
+          let d = dist(m1.position.x, m1.position.y, m2.position.x, m2.position.y);
+          this.springs.push(new Spring(m1, m2, d, this.stiffnessMultiplier))
+        }
+      } 
+      // inner-outer springs 
+      for (let i = tempOffset, j = 0; i < this.masses.length; i++, j++) {
+        let inner = this.masses[i];
+        let outer1 = this.masses[(j-2 + tempOffset)%tempOffset]; 
+        let outer2 = this.masses[j]; 
+        let outer3 = this.masses[(j+2)%tempOffset]; 
+        let d1 = dist(inner.position.x, inner.position.y, outer1.position.x, outer1.position.y);
+        let d2 = dist(inner.position.x, inner.position.y, outer2.position.x, outer2.position.y);
+        let d3 = dist(inner.position.x, inner.position.y, outer3.position.x, outer3.position.y);
+        this.springs.push(new Spring(inner, outer1, d1, this.stiffnessMultiplier))
+        this.springs.push(new Spring(inner, outer2, d2, this.stiffnessMultiplier))
+        this.springs.push(new Spring(inner, outer3, d3, this.stiffnessMultiplier))
+      }
+    } else if (this.rigMethod === SoftBodyRigMethod.GRID) {
+      for (let i = 0; i < height; i++) {
+        for (let j = 0; j < width; j++) {
+          this.masses.push(new Mass_point(currentPos.x, currentPos.y, MASSPOINT_MASS));
+          currentPos.x += SOFT_BODY_SIZE;
+        }
+        currentPos.x = positionx;
+        currentPos.y += SOFT_BODY_SIZE;
+      }
 
-    // const top_left_index = 0;
-    // const top_right_index = width - 1;
-    // const bottom_right_index = top_right_index + height - 1;
-    // const bottom_left_index = bottom_right_index + width - 1;
-    
-    // for (let i = top_left_index; i <= top_right_index - 1; i++) {
-    //   let m1 = this.masses[i];
-    //   let m2 = this.masses[bottom_left_index - 1 - i];
-    //   let d = dist(m1.position.x, m1.position.y, m2.position.x, m2.position.y);
-    //   this.springs.push(new Spring(m1, m2, d, false))
-    // }
-    // for (let i = top_left_index + 1; i <= top_right_index - 1; i++) {
-    //   let m1 = this.masses[i];
-    //   let m2 = this.masses[bottom_left_index - i];
-    //   let d = dist(m1.position.x, m1.position.y, m2.position.x, m2.position.y);
-    //   this.springs.push(new Spring(m1, m2, d, false))
-    // }
-    // for (let i = top_left_index + 1; i <= top_right_index; i++) {
-    //   let m1 = this.masses[i];
-    //   let m2 = this.masses[bottom_left_index - i + 1];
-    //   let d = dist(m1.position.x, m1.position.y, m2.position.x, m2.position.y);
-    //   this.springs.push(new Spring(m1, m2, d, false))
-    // }
+      for (let i = 0; i < height - 1; i++) {
+        for (let j = 0; j < width - 1; j++) {
+          let idx = i * width + j;
+          let m1 = this.masses[idx];
+          let m2 = this.masses[idx + 1];
+          let m3 = this.masses[idx + width];
+          let m4 = this.masses[idx + width + 1];
+          let d12 = dist(m1.position.x, m1.position.y, m2.position.x, m2.position.y);
+          let d13 = dist(m1.position.x, m1.position.y, m3.position.x, m3.position.y);
+          let d14 = dist(m1.position.x, m1.position.y, m4.position.x, m4.position.y);
+          let d23 = dist(m2.position.x, m2.position.y, m3.position.x, m3.position.y);
+          this.springs.push(new Spring(m1, m2, d12, this.stiffnessMultiplier));
+          this.springs.push(new Spring(m1, m3, d13, this.stiffnessMultiplier));
+          this.springs.push(new Spring(m1, m4, d14, this.stiffnessMultiplier));
+          this.springs.push(new Spring(m2, m3, d23, this.stiffnessMultiplier));
 
-    // for (let i = bottom_left_index, k = 0; i <= bottom_left_index + height - 2; i++, k++) {
-    //   let m1 = this.masses[i];
-    //   let m2 = this.masses[bottom_right_index - k + 1];
-    //   let d = dist(m1.position.x, m1.position.y, m2.position.x, m2.position.y);
-    //   this.springs.push(new Spring(m1, m2, d, false))
-    // }
-    // let m1 = this.masses[0];
-    // let m2 = this.masses[width];
-    // let d = dist(m1.position.x, m1.position.y, m2.position.x, m2.position.y);
-    // this.springs.push(new Spring(m1, m2, d, false))
-    
-    // for (let i = top_right_index, k = 0; i <= bottom_right_index - 1; i++, k++) {
-    //   let m1 = this.masses[i];
-    //   let m2 = this.masses[bottom_left_index + height - 2 - k];
-    //   let d = dist(m1.position.x, m1.position.y, m2.position.x, m2.position.y);
-    //   this.springs.push(new Spring(m1, m2, d, false))
-    // }
-    // for (let i = top_right_index + 1, k = 0; i <= bottom_right_index - 1; i++, k++) {
-    //   let m1 = this.masses[i];
-    //   let m2 = this.masses[bottom_left_index + height - 2 - k];
-    //   let d = dist(m1.position.x, m1.position.y, m2.position.x, m2.position.y);
-    //   this.springs.push(new Spring(m1, m2, d, false))
-    // }
+          if ( j === width - 2) {
+            let d24 = dist(m2.position.x, m2.position.y, m4.position.x, m4.position.y);
+            this.springs.push(new Spring(m2, m4, d24, this.stiffnessMultiplier));
+          }
+          if (i === height - 2) {
+            let d34 = dist(m3.position.x, m3.position.y, m4.position.x, m4.position.y);
+            this.springs.push(new Spring(m3, m4, d34, this.stiffnessMultiplier));
+          }
+        }
+      } 
+
+
+    }
 
   }
 
+  #getPerimeterPoints() {
+    if (this.rigMethod === SoftBodyRigMethod.PERIMETER) {
+      return this.masses
+    }
+
+    else if (this.rigMethod === SoftBodyRigMethod.GRID) {
+      let perimeterPoints = [];
+      // push the first row into the perimeter
+      for (let i = 0; i < this.width; i++) {
+        perimeterPoints.push(this.masses[i]);
+      }
+      // push the last column into the perimeter
+      for (let i = 2 * this.width - 1; i < this.masses.length; i += this.width) {
+        perimeterPoints.push(this.masses[i]);
+      }
+      // push the last row into the perimeter in reverse order
+      for (let i = this.masses.length - 1; i > this.masses.length - this.width; i--) {
+        perimeterPoints.push(this.masses[i]);
+      }
+      // push the first column into the perimeter in reverse order
+      for (let i = this.masses.length - this.width; i > 0; i -= this.width) {
+        perimeterPoints.push(this.masses[i]);
+      } 
+      return perimeterPoints;
+    }
+  }
   show() {
-    for (let spring of this.springs) 
-      spring.show();
-    for (let mass of this.masses)
-      mass.show();
+    if (this.showMethod === SoftBodyShowMethod.RIG) {
+      for (let spring of this.springs) 
+        spring.show();
+      for (let mass of this.masses)
+        mass.show();
+    }
+    else if (this.showMethod === SoftBodyShowMethod.SURFACE) {
+      // convex hull
+      // let points = grahamScan(this.masses.map(m => m.position));
+      const perimeterPoints = this.#getPerimeterPoints();
+      console.log(perimeterPoints.length);
+      let points = perimeterPoints.map(mass => mass.position);
+      push();
+      fill(200, 50, 50, 200);
+      beginShape();
+      for (let point of points) {
+        vertex(point.x, point.y);
+      }
+      endShape(CLOSE);
+      pop();
+      // noLoop();
+    }
 
     if (!this.debug) return;
 
@@ -152,7 +306,8 @@ class Soft_body {
       }
       if (minT === Infinity) continue;
       // collision found between mass and a polygon
-      let contactPoint = createVector(contact.x, contact.y)
+      this._tmpContactPoint.set(contact.x, contact.y);
+      let contactPoint = this._tmpContactPoint.copy(); //! copy or not?
       let normal = collidingLine.normal();
         
       this.collisionConstraints.push({
@@ -163,10 +318,11 @@ class Soft_body {
     }
   }
 
-  applyExternalForce(eForceX, eForceY, deltaTime) {
-    let forceVector = createVector(eForceX, eForceY);
+  applyExternalForce(extForceX, extForceY, deltaTime) {
+    // let forceVector = createVector(extForceX, extForceY);
     for (let mass of this.masses) {
-      mass.velocity.add(p5.Vector.mult(forceVector, deltaTime * mass.w))
+      this._forceVector.set(extForceX, extForceY);
+      mass.velocity.add(this._forceVector.mult(deltaTime * mass.w));
     }
   }
 
@@ -179,27 +335,38 @@ class Soft_body {
   projectPosition(deltaTime) {
     // this function will calculate the predicted position of each of the particles
     for (let mass of this.masses) {
-      mass.predictedPosition = p5.Vector.add(mass.position, p5.Vector.mult(mass.velocity, deltaTime));
+      this._tempInGeneral.set(mass.velocity.x, mass.velocity.y);
+      this._tempInGeneral.mult(deltaTime);
+      this._tempInGeneral.add(mass.position);
+      mass.predictedPosition.set(this._tempInGeneral.x, this._tempInGeneral.y);
+      // mass.predictedPosition = p5.Vector.add(mass.position, p5.Vector.mult(mass.velocity, deltaTime));
     }
   }
 
   #solveSingleSpringConstraint(spring) {
-    let mass1 = spring.A;
-    let mass2 = spring.B;
-    let p1 = mass1.predictedPosition;
-    let p2 = mass2.predictedPosition;
-    let l = spring.resting_length;
-    let vect = p5.Vector.sub(p2, p1);
-    let d = vect.mag();
-    let constraintValue = d - l;
-
-    let v = p5.Vector.normalize(vect) // unit vector from p1 to p2 
-    let lambda = -1.0 * constraintValue / (mass1.w + mass2.w);
+    const mass1 = spring.A;
+    const mass2 = spring.B;
+    const p1 = mass1.predictedPosition;
+    const p2 = mass2.predictedPosition;
+    const l = spring.resting_length;
+    const vect = p5.Vector.sub(p2, p1);
+    const d = vect.mag();
     
-    let delx1 = p5.Vector.mult(v, -lambda * mass1.w * spring.stiffness);
-    let delx2 = p5.Vector.mult(v,  lambda * mass2.w * spring.stiffness);
-    mass1.predictedPosition.add(delx1);
-    mass2.predictedPosition.add(delx2)
+    // Early exit if masses are coincident or both are immovable
+    if (d === 0 || (mass1.w + mass2.w === 0)) return;
+    
+    const constraintValue = d - l;
+    const v = vect.copy().normalize() // unit vector from p1 to p2 
+    const lambda = -1.0 * constraintValue / (mass1.w + mass2.w);
+    
+    // const delx1 = p5.Vector.mult(v, -lambda * mass1.w * spring.stiffness);
+    // const delx2 = p5.Vector.mult(v,  lambda * mass2.w * spring.stiffness);
+    // mass1.predictedPosition.add(delx1);
+    // mass2.predictedPosition.add(delx2);
+    this._tempInGeneral.set(v.x, v.y).mult(-lambda * mass1.w * spring.stiffness);
+    mass1.predictedPosition.add(this._tempInGeneral);
+    this._tempInGeneral.set(v.x, v.y).mult(lambda * mass2.w * spring.stiffness);
+    mass2.predictedPosition.add(this._tempInGeneral);
   }
 
   solveSpringConstraints() {
@@ -214,37 +381,30 @@ class Soft_body {
       let {contactPoint, normal, index} = constraint;
       // evaluate the constraint C(p) = (p - con).n - d >= 0
       let mass = this.masses[index];
-      let constraint_val = p5.Vector.sub(mass.predictedPosition, contactPoint).dot(normal) - mass.radius;
+      this._tempCollisionPminusQs.set(mass.predictedPosition.x, mass.predictedPosition.y).sub(contactPoint);
+      let constraint_val = this._tempCollisionPminusQs.dot(normal) - mass.radius;
 
       if (constraint_val >= 0) continue;
-      let deltax = p5.Vector.mult(normal, -1 * (constraint_val + EPSILON) * mass.w);
-      mass.predictedPosition.add(deltax);
-
-
-      // let velocity = mass.velocity;
-      // let dot_product = velocity.dot(normal);
-      // let reflection_velocity = velocity.sub(normal.mult(2 * dot_product));
-      // mass.velocity = reflection_velocity.mult(BOUNCE_CONSTANT)
-
-      // let dotProduct = mass.velocity.dot(normal);
-      // let v_normal = p5.Vector.mult(normal, dotProduct);
-      // let v_tangent = p5.Vector.sub(mass.velocity, v_normal)
-
-      // mass.velocity = p5.Vector.mult(v_normal, BOUNCE_CONSTANT);
-      // mass.velocity.add(p5.Vector.mult(v_tangent, SLIDE_CONSTANT));
+      this._tempCollisionDeltaX.set(normal.x, normal.y).mult(-1 * (constraint_val + EPSILON)* mass.w);
+      mass.predictedPosition.add(this._tempCollisionDeltaX);
+      // let deltax = p5.Vector.mult(normal, -1 * (constraint_val + EPSILON) * mass.w);
+      // mass.predictedPosition.add(deltax);
     }
   }
 
   updateVelocity(deltaTIme) {
     for (let mass of this.masses) {
-      let deltax = p5.Vector.sub(mass.predictedPosition, mass.position);
-      mass.velocity = p5.Vector.div(deltax, deltaTIme);
+      // let deltax = p5.Vector.sub(mass.predictedPosition, mass.position);
+      this._tempInGeneral.set(mass.predictedPosition.x, mass.predictedPosition.y);
+      this._tempInGeneral.sub(mass.position).div(deltaTIme);
+      // mass.velocity = p5.Vector.div(deltax, deltaTIme);
+      mass.velocity.set(this._tempInGeneral.x, this._tempInGeneral.y);
     }
   }
 
   updatePosition() {
     for (let mass of this.masses) {
-      mass.position = mass.predictedPosition;
+      mass.position = mass.predictedPosition.copy();
     }
   }
 
@@ -255,6 +415,7 @@ class Soft_body {
       let mass = this.masses[index];
 
       let dotProduct = mass.velocity.dot(normal);
+
       let v_normal = p5.Vector.mult(normal, dotProduct);
       let v_tangent = p5.Vector.sub(mass.velocity, v_normal);
 

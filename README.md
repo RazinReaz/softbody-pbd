@@ -1,7 +1,18 @@
 # Softbody Simulation
-Simulating dynamics of a soft body using  a PBD solver. ![paper Muller et al. (2006)](https://matthias-research.github.io/pages/publications/posBasedDyn.pdf)
+Simulating dynamics of a soft body using  a PBD solver. [![paper Muller et al. (2006)](https://matthias-research.github.io/pages/publications/posBasedDyn.pdf)]
+# Features
+- Position based dynamics
+- Spring mass model
+- Continuous collision detection
+- Mouse drag interactivity
+# TODO
+- self collisions
+- sub stepping
+- XPBD
+- alpha shapes
 # bugs
 - collision is overpowered by spring constraints if soft body collides with high velocity
+- for a grid structure, only the first collision takes a lot of time to solve.
 - the softbody sometimes deforms and achieves a stable state different from the initial form. A collision with high velocity results in this deformation.
 # Journey
 ## Spring mass model
@@ -31,6 +42,9 @@ The collisions are checked by drawing a ray from the current position of the mas
 - I reported a continuous collision as soon as the ray intersected any line of the polygon. But the reported collision and the colliding line should onlybe the closest line to the ray with the least distance. Same for polygons. A ray might intersect two overlapping olygons. Only return the one where the distance of collision is least.
 
 - I thought there is no need for static collisions since, if we detect continuous collisions, the the case of the ray completely lying inside a polygon (and thereby being static collision) will not happen. If it does happen then that means the continuous collision failed. But it does happen since $x$ can be modified to be inside the polygon at any step of the algorithm. So, I had to implement static collisions.
+
+## Challenges
+- for a grid based structure, th simulation is more lifelike. But the simulation dropped in performance when the softbody hit the floor for the first time. The problem I identified was creating new `p5.Vector` objects every frame, which called the garbage collector extensively. Reusing the same object mitigated the problem somewhat with improved performance. Another reason was (which was most probably the defining factor) is that the fps drop only occured when I was drawing all the grid points and springs. The profiler showed that the `show()` method call was eating up a lot of time. So I changed the show ethod to surface and only draw the perimeter of the soft body.  
 
 
 

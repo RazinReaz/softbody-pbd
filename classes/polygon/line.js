@@ -7,6 +7,8 @@ class Line{
         this.min_y = min(this.p.y, this.q.y);
         this.slope = (y2 - y1) / (x2 - x1);
         this.intercept = y1 - this.slope * x1;
+        let edge = p5.Vector.sub(this.q, this.p);
+        this.normalVector = createVector(-edge.y, edge.x).normalize();
     }
 
     show(strokeval = 255, weight = 1){
@@ -24,9 +26,7 @@ class Line{
     }
 
     normal(){
-        let edge = p5.Vector.sub(this.q, this.p);
-        let normal = createVector(-edge.y, edge.x)
-        return normal.normalize();
+        return this.normalVector;
     }
 
     closest_point_on_line_from(point){

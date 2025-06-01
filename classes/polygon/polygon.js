@@ -8,14 +8,6 @@ function polygon_points(x, y, n, radius){
     return points;
 }
 
-// Orientation helper
-function getOrientation(a, b, c) {
-// a, b, c are all 2D vectors
-    const crossProd = (b.y - a.y) * (c.x - b.x) - (b.x - a.x) * (c.y - b.y);
-    if (crossProd === 0) return 0;  // colinear
-    return crossProd > 0 ? 1 : 2;   // 1 = clockwise, 2 = counterclockwise
-}
-
 // Checks if point c is on segment ab
 function onSegment(a, b, c) {
     return Math.min(a.x, b.x) <= c.x && c.x <= Math.max(a.x, b.x) && Math.min(a.y, b.y) <= c.y && c.y <= Math.max(a.y, b.y);
@@ -207,7 +199,6 @@ class Polygon{
                 collision = result.collision;
                 collidingLine = line;
                 contact = result.contactPoint;
-                console.log("contact: ", contact);
                 t = result.t;
             }
         }

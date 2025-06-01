@@ -3,7 +3,7 @@ class Mass_point{
         this.position = createVector(x, y);
         this.velocity = createVector(0, 0);
         this.w = 1/m;
-        // this.force = createVector(0, 0);
+
         this.radius = MASSPOINT_RADIUS;
         this.predictedPosition = createVector(0,0);
     }

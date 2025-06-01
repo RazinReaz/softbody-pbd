@@ -10,15 +10,15 @@ let mouseInteractionRadius = 0;
 
 function setup() {
   createCanvas(800, 600);
-  softBody = new Soft_body(350, 10, 10, 7, SPRINT_CONSTRAINT_STIFFNESS, SOLVER_ITERATIONS);
+  softBody = new Soft_body(350, 10, 15, 12, SPRING_CONSTRAINT_STIFFNESS, SOLVER_ITERATIONS);
 
   floor = new Polygon([createVector(0, height - 50), createVector(width, height - 50), createVector(width, height - 50 - 50), createVector(0, height - 50 - 50)]);
   left = new Polygon([createVector(0, 0), createVector(50, height), createVector(100, height), createVector(50, 0)]);
   right = new Polygon([createVector(width, 0), createVector(width - 50, 0), createVector(width - 50, height), createVector(width, height)]);
   ceiling = new Polygon([createVector(0, 0), createVector(width, 0), createVector(width, -50), createVector(0, -50)]);
-  polygons.push(new Polygon(500, 150, 9));
-  polygons.push(new Polygon(100, 300, 7));
-  polygons.push(new Polygon(350, 400, 5));
+  // polygons.push(new Polygon(500, 150, 9));
+  // polygons.push(new Polygon(100, 300, 7));
+  // polygons.push(new Polygon(350, 400, 5));
   polygons.push(ceiling);
   polygons.push(floor);
   polygons.push(left);
@@ -48,17 +48,17 @@ function draw() {
     mvx = 0;
     mvy = 0;
   }
-  dt = deltaTime
-  
+  // dt = deltaTime
   
   // apply all external forces on all particles
   softBody.applyExternalForce(0, GRAVITY_FORCE_Y, dt);
   softBody.applyExternalForce(mvx, mvy, dt);
   softBody.dampVelocity(DAMPING);
+  // noLoop();
   
   // calculate the predicted postions of all particles
   softBody.projectPosition(dt);
-
+  
   for (let polygon of polygons){
     polygon.show();
   }
@@ -71,7 +71,10 @@ function draw() {
     softBody.solveSpringConstraints();
     softBody.solveCollisionConstraints();
   }
-
+  
+  if (softBody.collisionConstraints.length > 0) {
+    console.log(`deltaTime: ${deltaTime}, dt: ${dt}, constraints: ${softBody.collisionConstraints.length}`);
+  }
   //post-solve step
   softBody.updateVelocity(dt);
   softBody.updatePosition();
