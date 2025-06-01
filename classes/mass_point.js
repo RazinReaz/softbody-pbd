@@ -14,7 +14,7 @@ class Mass_point{
         noStroke()
         fill(200,50,50);
         circle(this.position.x, this.position.y, 2 * this.radius);
-        circle(this.predictedPosition.x, this.predictedPosition.y, this.radius);
+        // circle(this.predictedPosition.x, this.predictedPosition.y, this.radius);
         pop();
     }
 

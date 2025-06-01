@@ -116,7 +116,7 @@ class Polygon{
         }
     }
 
-    show(fillColor = 200){
+    show(fillColor = 250){
         // TODO fill using other methods
         push()
         fill(fillColor)
@@ -125,31 +125,19 @@ class Polygon{
             vertex(point.x, point.y);
         }
         endShape(CLOSE);
-        // // Draw surface normals for each line
-        // stroke('red');
-        // strokeWeight(2);
-        // for (let line_ of this.lines) {
-        //     // Midpoint of the line
-        //     let mx = (line_.p.x + line_.q.x) / 2;
-        //     let my = (line_.p.y + line_.q.y) / 2;
-        //     // Get the normal vector (assume line_.normal() returns a p5.Vector)
-        //     let n = line_.normal();
-        //     // Normalize and scale for visibility
-        //     let n_scaled = n.copy().setMag(30);
-        //     // Draw arrow for normal
-        //     let x2 = mx + n_scaled.x;
-        //     let y2 = my + n_scaled.y;
-        //     // Draw the main line of the arrow
-        //     line(mx, my, x2, y2);
-        //     // Draw arrowhead
-        //     push();
-        //     translate(x2, y2);
-        //     rotate(n.heading());
-        //     line(0, 0, -7, -4);
-        //     line(0, 0, -7, 4);
-        //     pop();
-        // }
+        // drawSurfaceNormals();
         pop()
+    }
+
+    drawSurfaceNormals(){
+        // Draw surface normals for each line
+        push()
+        stroke('red');
+        strokeWeight(2);
+        for (let line_ of this.lines) {
+            line_.drawNormal();
+        }
+        pop();
     }
 
     collides_with(mass_point_position){
@@ -188,7 +176,7 @@ class Polygon{
                 collision: false,
                 collidingLine: null,
                 contact: null,
-                type: "none"
+                t: Infinity,
             };
         
         // check if the ray from position to predictedPosition lies completely inside the polygon
@@ -202,12 +190,12 @@ class Polygon{
                 collision : true,
                 collidingLine : closest_line,
                 contact : contact,
-                type: "static"
+                t: -1, // -1 indicates static collision
             }
         }
         
         let t = Infinity;
-        let collision;
+        let collision = false;
         let collidingLine = null;
         let contact = null;
         
@@ -219,60 +207,24 @@ class Polygon{
                 collision = result.collision;
                 collidingLine = line;
                 contact = result.contactPoint;
+                console.log("contact: ", contact);
                 t = result.t;
             }
-            
-            //     const o1 = getOrientation(position, predictedPosition, line.p);
-            //     const o2 = getOrientation(position, predictedPosition, line.q);
-            //     const o3 = getOrientation(line.p, line.q, position);
-        //     const o4 = getOrientation(line.p, line.q, predictedPosition);
-        
-        //     if (o1 !== o2 && o3 !== o4 ) 
-        //         return {
-        //             collision: true,
-        //             collidingLine: line
-        //         };
-        
-        //     if (o1 === 0 && onSegment(position, predictedPosition, line.p)) 
-        //         return {
-        //             collision: true,
-        //             collidingLine: line
-        //         };
-        
-        //     if (o2 === 0 && onSegment(position, predictedPosition, line.q)) 
-        //         return {
-        //             collision: true,
-        //             collidingLine: line
-        //         };
-        
-        //     if (o3 === 0 && onSegment(line.p, line.q, position)) 
-        //         return {
-        //             collision: true,
-        //             collidingLine: line
-        //         };
-        
-        //     if (o4 === 0 && onSegment(line.p, line.q, predictedPosition)) 
-        //         return {
-        //             collision: true,
-        //             collidingLine: line
-        //         };
-        
         }
         if (t === Infinity) {
             return {
                 collision: false,
                 collidingLine: null,
                 contact: null,
-                type: "none"
+                t: Infinity,
             };
         } else {
-                // console.log("continuous collision")
-                return {
-                    collision: true,
-                    collidingLine: collidingLine,
-                    contact: contact,
-                    type: "continuous"
-                };
+            return {
+                collision: true,
+                collidingLine,
+                contact,
+                t: t,
+            };
         }
     }
 

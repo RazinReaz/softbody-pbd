@@ -32,12 +32,46 @@ class Line{
     closest_point_on_line_from(point){
         let m = this.slope;
         let c = this.intercept;
-        if ( m == 0 ) return createVector(point.x, this.p.y);
-        if ( m == Infinity || m == -Infinity) return createVector(this.p.x, point.y);
+        if ( m == 0 ) 
+            return {
+                x: point.x,
+                y: this.p.y
+            };
+
+        if ( m == Infinity || m == -Infinity) 
+            return {
+                x: this.p.x,
+                y: point.y
+            }
         
         let b = point.y + point.x / m;
         let xp = (b - c) / (m + 1 / m);
         let yp = m * xp + c;
-        return createVector(xp, yp);
+        return {
+            x: xp,
+            y: yp
+        };
+    }
+
+    drawNormal(){
+        // Midpoint of the line
+        let mx = (this.p.x + this.q.x) / 2;
+        let my = (this.p.y + this.q.y) / 2;
+        // Get the normal vector (assume line_.normal() returns a p5.Vector)
+        let n = this.normal();
+        // Normalize and scale for visibility
+        let n_scaled = n.copy().setMag(30);
+        // Draw arrow for normal
+        let x2 = mx + n_scaled.x;
+        let y2 = my + n_scaled.y;
+        // Draw the main line of the arrow
+        line(mx, my, x2, y2);
+        // Draw arrowhead
+        push();
+        translate(x2, y2);
+        rotate(n.heading());
+        line(0, 0, -7, -4);
+        line(0, 0, -7, 4);
+        pop();
     }
 }

@@ -6,7 +6,7 @@ class Soft_body {
     this.springs = [];
     this.masses = [];
     this.collisionConstraints = [];
-    this.debug = false
+    this.debug = false;
 
     let currentPos = {
       x : positionx,
@@ -50,7 +50,7 @@ class Soft_body {
         let m1 = this.masses[i];
         let m2 = this.masses[(i+offset) % this.masses.length];
         let d = dist(m1.position.x, m1.position.y, m2.position.x, m2.position.y);
-        this.springs.push(new Spring(m1, m2, d, this.stiffnessMultiplier, false))
+        this.springs.push(new Spring(m1, m2, d, this.stiffnessMultiplier))
       }
     } 
 
@@ -130,27 +130,36 @@ class Soft_body {
 
   generateCollisionConstraints(polygons) {
     this.collisionConstraints.length = 0;
-    for (let polygon of polygons) {
-      for (let i = 0; i < this.masses.length; i++) {
-        let mass = this.masses[i];
-        let {collision, collidingLine, contact, type} = polygon.collisionAlongRay(mass.position, mass.predictedPosition)
-        if (!collision)
-          continue;
-        
-        if (this.debug)
-          console.log(type, "collision")
+    for (let i = 0; i < this.masses.length; i++) {
+      let mass = this.masses[i];
+      let minT = Infinity;
+      let contact = null;
+      let collidingLine = null;
 
-        let contactPoint = createVector(contact.x, contact.y)
-        let n_hat = collidingLine.normal();
-        
-        this.collisionConstraints.push(
-          {
-            contactPoint : contactPoint,
-            normal : n_hat,
-            index: i,
-          }
-        )
+      for (const polygon of polygons) {
+        const {collision, collidingLine: line, contact: contactCandidate, t} = polygon.collisionAlongRay(mass.position, mass.predictedPosition)
+        if (!collision) continue;
+
+        if (this.debug) {
+          console.log(t == -1 && collision ? "Static Collision" : "Continuous collision");
+        }
+
+        if (t < minT) {
+          minT = t;
+          contact = contactCandidate;
+          collidingLine = line;
+        }
       }
+      if (minT === Infinity) continue;
+      // collision found between mass and a polygon
+      let contactPoint = createVector(contact.x, contact.y)
+      let normal = collidingLine.normal();
+        
+      this.collisionConstraints.push({
+        contactPoint,
+        normal,
+        index: i,
+      });
     }
   }
 
@@ -196,10 +205,6 @@ class Soft_body {
   solveSpringConstraints() {
     for (let spring of this.springs) {
       this.#solveSingleSpringConstraint(spring);
-      // push()
-      // fill('white')
-      // circle(spring.A.predictedPosition.x, spring.A.predictedPosition.y, 20)
-      // pop()
     }
   }
 
