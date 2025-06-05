@@ -25,7 +25,7 @@ At first I represented the soft body as a grid. But it had the caveat of requiri
 If we hide the internal springs, we get a soft body that looks like this: \
 ![soft-body](./assets/img/softbody-point-mass.jpg) \
 This approach has the drawback of deforming the body and it achieving a stable state different from the initial form. This looks like a butterfly: \
-![deformed soft body](./assets/img/upside-down-butterfly.jpg)
+![deformed soft body](./assets/img/upside-down-butterfly.jpg) \
 Since this is rare, I will not modify it right now and focus on surface construction.
 
 ## Force accumulation in spring mass model
@@ -56,7 +56,7 @@ Self collision detection is to prevent the softbody from folding into itself. Al
 I could not get it to work properly when the softbody collides at high velocity. But it is good enough for now. \
 
 Just for fun, here is one of the bugs I faced:\
-|[buggy self collision resolution](./assets/gif/self-collision-fail-1.gif)
+![buggy self collision resolution](./assets/gif/self-collision-fail-1.gif)
 
 ## Challenges
 - for a grid based structure, th simulation is more lifelike. But the simulation dropped in performance when the softbody hit the floor for the first time. The problem I identified was creating new `p5.Vector` objects every frame, which called the garbage collector extensively. Reusing the same object mitigated the problem somewhat with improved performance. Another reason was (which was most probably the defining factor) is that the fps drop only occured when I was drawing all the grid points and springs. The profiler showed that the `show()` method call was eating up a lot of time. So I changed the show ethod to surface and only draw the perimeter of the soft body.  
