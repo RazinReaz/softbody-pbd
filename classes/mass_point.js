@@ -15,11 +15,11 @@ class Mass_point{
         this.accumulatedVelocity = createVector(0, 0);
     }
 
-    show(){
+    show(r=200, g=50, b=50){
         push();
         // stroke(255);
         noStroke()
-        fill(200,50,50);
+        fill(r, g, b);
         circle(this.position.x, this.position.y, 2 * this.radius);
         // circle(this.predictedPosition.x, this.predictedPosition.y, this.radius);
         pop();
