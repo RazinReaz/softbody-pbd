@@ -3,17 +3,18 @@ Simulating dynamics of a soft body using  a PBD solver. [![paper Muller et al. (
 # Features
 - Position based dynamics
 - Spring mass model
-- Continuous collision detection
+- Self collision detection using spatial hashing
+- Continuous and static collision detection
 - Mouse drag interactivity
+- User interactivity of the soft body
+
 # TODO
-- self collisions
 - sub stepping
 - XPBD
 - alpha shapes
+
 # bugs
-- collision is overpowered by spring constraints if soft body collides with high velocity
-- for a grid structure, only the first collision takes a lot of time to solve.
-- the softbody sometimes deforms and achieves a stable state different from the initial form. A collision with high velocity results in this deformation.
+
 # Journey
 ## Spring mass model
 THere are a lot of ways to simulate soft bodies. But the most beginner friendly method with the most resources is the spring mass model. The idea is to represent the softbody as a collection of masses attached by springs. At each time frame, we nudge the masses according to the spring forces acting on them. The spring constants determine how stiff the body is going to be.
@@ -42,6 +43,20 @@ The collisions are checked by drawing a ray from the current position of the mas
 - I reported a continuous collision as soon as the ray intersected any line of the polygon. But the reported collision and the colliding line should onlybe the closest line to the ray with the least distance. Same for polygons. A ray might intersect two overlapping olygons. Only return the one where the distance of collision is least.
 
 - I thought there is no need for static collisions since, if we detect continuous collisions, the the case of the ray completely lying inside a polygon (and thereby being static collision) will not happen. If it does happen then that means the continuous collision failed. But it does happen since $x$ can be modified to be inside the polygon at any step of the algorithm. So, I had to implement static collisions.
+
+## Spatial hashing
+To detect self collisions, I used spatial hashing. Dividing up the 2D space into a grid and then hashing the index of a list of linked list containing all the objects in that cell. This approach optmizes the neighbour query.
+
+## Self collisions
+Self collision detection is to prevent the softbody from folding into itself. Although, this folding only appears in a grid based structure. Detection of the self collision was easy and efficient due to spatial hashing. The collision resolution step was hard. After pushing the particles so that they are touching, I tried
+- reflecting the velocities 
+- solving the velocities from the formula for elastic collisions
+- Correcting the velocities (from ![This video](https://www.youtube.com/watch?v=XY3dLpgOk4Q))
+
+I could not get it to work properly when the softbody collides at high velocity. But it is good enough for now. \
+
+Just for fun, here is one of the bugs I faced:\
+|[buggy self collision resolution](./assets/gif/self-collision-fail-1.gif)
 
 ## Challenges
 - for a grid based structure, th simulation is more lifelike. But the simulation dropped in performance when the softbody hit the floor for the first time. The problem I identified was creating new `p5.Vector` objects every frame, which called the garbage collector extensively. Reusing the same object mitigated the problem somewhat with improved performance. Another reason was (which was most probably the defining factor) is that the fps drop only occured when I was drawing all the grid points and springs. The profiler showed that the `show()` method call was eating up a lot of time. So I changed the show ethod to surface and only draw the perimeter of the soft body.  

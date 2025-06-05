@@ -339,8 +339,8 @@ class Soft_body {
                     massB: neighbour,
                 });
                 // console.log(`self collision detected between mass ${mass.id} & ${neighbour.id}`)
-                mass.show(50, 200, 50);
-                neighbour.show(50, 200, 50);
+                // mass.show(50, 200, 50);
+                // neighbour.show(50, 200, 50);
             }
         }
     }
