@@ -1,4 +1,5 @@
 let softBody;
+let hashGrid;
 let floor;
 let left;
 let right;
@@ -8,9 +9,21 @@ let pause = false;
 let mvx, mvy;
 let mouseInteractionRadius = 0;
 
+function instructions() {
+  push();
+    noStroke();
+    fill(201);
+    textAlign(CENTER, TOP);
+    textFont('Product Sans');
+    textSize(15);    
+    text("Click and drag with mouse to interact with the softbody", width / 2, 30);
+  pop();
+}
+
 function setup() {
   createCanvas(800, 600);
-  softBody = new Soft_body(350, 10, 15, 12, SPRING_CONSTRAINT_STIFFNESS, SOLVER_ITERATIONS);
+  softBody = new Soft_body(350, 10, SOFTBODY_WIDTH, SOFTBODY_HEIGHT, SPRING_CONSTRAINT_STIFFNESS, SOLVER_ITERATIONS);
+  hashGrid = new Grid(2 * SOFTBODY_SIZE, SOFTBODY_WIDTH * SOFTBODY_HEIGHT);
 
   floor = new Polygon([createVector(0, height - 50), createVector(width, height - 50), createVector(width, height - 50 - 50), createVector(0, height - 50 - 50)]);
   left = new Polygon([createVector(0, 0), createVector(50, height), createVector(100, height), createVector(50, 0)]);
@@ -30,23 +43,15 @@ let dt = 10;
 function draw() {
   // frameRate(0.2);
   background(51);
-  push();
-    noStroke();
-    fill(201);
-    textAlign(CENTER, TOP);
-    textFont('Product Sans');
-    textSize(15);    
-    text("Click and drag with mouse to interact with the softbody", width / 2, 30);
-  pop();
-
+  instructions();
+  // for (let mass of softBody.masses)
+  //   hashGrid.update(mass)
 
   if (mouseIsPressed && mouseButton === LEFT) {
     mvx = (mouseX - pmouseX) * MOUSE_FORCE_MULTPLIER;
     mvy = (mouseY - pmouseY) * MOUSE_FORCE_MULTPLIER;
-
   } else {
-    mvx = 0;
-    mvy = 0;
+    mvx = 0, mvy = 0;
   }
   // dt = deltaTime
   
@@ -58,23 +63,25 @@ function draw() {
   
   // calculate the predicted postions of all particles
   softBody.projectPosition(dt);
+  softBody.generateCollisionConstraints(polygons);
+  // softBody.generateSelfCollisionConstraints(hashGrid);
   
   for (let polygon of polygons){
     polygon.show();
   }
-  
-  softBody.generateCollisionConstraints(polygons);
   softBody.show();
+
   // solve step
   for (let i=0; i < SOLVER_ITERATIONS; i++) {
     // solve all constraints
-    softBody.solveSpringConstraints();
     softBody.solveCollisionConstraints();
+    // softBody.solveSelfCollisionConstraints();
+    softBody.solveSpringConstraints();
   }
   
-  if (softBody.collisionConstraints.length > 0) {
-    console.log(`deltaTime: ${deltaTime}, dt: ${dt}, constraints: ${softBody.collisionConstraints.length}`);
-  }
+  // if (softBody.collisionConstraints.length > 0) {
+  //   console.log(`deltaTime: ${deltaTime}, dt: ${dt}, constraints: ${softBody.collisionConstraints.length}`);
+  // }
   //post-solve step
   softBody.updateVelocity(dt);
   softBody.updatePosition();
