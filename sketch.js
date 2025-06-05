@@ -9,6 +9,10 @@ let pause = false;
 let mvx, mvy;
 let mouseInteractionRadius = 0;
 
+
+
+
+
 function instructions() {
   push();
     noStroke();
@@ -20,10 +24,70 @@ function instructions() {
   pop();
 }
 
+// user interaction
+let showMethodButtons = [];
+let rigMethodButtons = [];
+let showMethods = [
+  { name: "Rig", value: SoftBodyShowMethod.RIG },
+  { name: "Surface", value: SoftBodyShowMethod.SURFACE }
+];
+let rigMethods = [
+  { name: "Perimeter", value: SoftBodyRigMethod.PERIMETER },
+  { name: "Grid", value: SoftBodyRigMethod.GRID }
+];
+
+let selectedRigMethod = SoftBodyRigMethod.GRID;
+let selectedShowMethod = SoftBodyShowMethod.SURFACE;
+
+function createSoftBodyUI() {
+  // Show method buttons
+  let showDiv = createDiv('Show Method:');
+  showDiv.position(10, 10);
+  showMethodButtons = [];
+  showMethods.forEach((method, idx) => {
+    let btn = createButton(method.name);
+    btn.parent(showDiv);
+    btn.mousePressed(() => {
+      selectedShowMethod = method.value;
+      showMethodButtons.forEach(b => b.removeClass('selected'));
+      btn.addClass('selected');
+    });
+    showMethodButtons.push(btn);
+    if (idx === 0) btn.addClass('selected');
+  });
+
+  // Rig method buttons
+  let rigDiv = createDiv('Rig Method:');
+  rigDiv.position(10, 40);
+  rigMethodButtons = [];
+  rigMethods.forEach((method, idx) => {
+    let btn = createButton(method.name);
+    btn.parent(rigDiv);
+    btn.mousePressed(() => {
+      selectedRigMethod = method.value;
+      // Optionally, recreate softBody here if you want to re-initialize it
+      rigMethodButtons.forEach(b => b.removeClass('selected'));
+      btn.addClass('selected');
+      restartSimulation();
+    });
+    rigMethodButtons.push(btn);
+    if (idx === 0) btn.addClass('selected');
+  });
+}
+
+function restartSimulation() {
+  softBody = new Soft_body(350, 10, SOFTBODY_WIDTH, SOFTBODY_HEIGHT, SPRING_CONSTRAINT_STIFFNESS, SOLVER_ITERATIONS, selectedRigMethod, selectedShowMethod);
+  hashGrid = new Grid(2 * SOFTBODY_SIZE, softBody.masses.length);
+  // If you need to reset other state (like hashGrid), do it here as well
+}
+
 function setup() {
   createCanvas(800, 600);
-  softBody = new Soft_body(350, 10, SOFTBODY_WIDTH, SOFTBODY_HEIGHT, SPRING_CONSTRAINT_STIFFNESS, SOLVER_ITERATIONS);
-  hashGrid = new Grid(2 * SOFTBODY_SIZE, SOFTBODY_WIDTH * SOFTBODY_HEIGHT);
+  // UI stuff
+  createSoftBodyUI();
+
+  softBody = new Soft_body(350, 10, SOFTBODY_WIDTH, SOFTBODY_HEIGHT, SPRING_CONSTRAINT_STIFFNESS, SOLVER_ITERATIONS, selectedRigMethod, selectedShowMethod);
+  hashGrid = new Grid(2 * SOFTBODY_SIZE, softBody.masses.length);
 
   floor = new Polygon([createVector(0, height - 50), createVector(width, height - 50), createVector(width, height - 50 - 50), createVector(0, height - 50 - 50)]);
   left = new Polygon([createVector(0, 0), createVector(50, height), createVector(100, height), createVector(50, 0)]);
@@ -36,6 +100,7 @@ function setup() {
   polygons.push(floor);
   polygons.push(left);
   polygons.push(right);
+
 }
 
 let dt = 10;
@@ -44,6 +109,7 @@ function draw() {
   // frameRate(0.2);
   background(51);
   instructions();
+  softBody.showMethod = selectedShowMethod;
   // for (let mass of softBody.masses)
   //   hashGrid.update(mass)
 

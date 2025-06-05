@@ -17,7 +17,7 @@ const SoftBodyRigMethod = {
 class Soft_body {
   // for now the soft body is a recatangle.
   // we will build other shapes later
-  constructor(positionx, positiony, width, height, springStiffness, solverIterations) {
+  constructor(positionx, positiony, width, height, springStiffness, solverIterations, rigMethod, showMethod) {
     this.springs = [];
     this.masses = [];
     this.width = width;
@@ -28,8 +28,8 @@ class Soft_body {
     
     
     this.debug = false;
-    this.showMethod = SoftBodyShowMethod.SURFACE;
-    this.rigMethod = SoftBodyRigMethod.GRID;
+    this.rigMethod = rigMethod;
+    this.showMethod = showMethod;
     
     // for performance issues
     this._tmpContactPoint = createVector(0, 0);
