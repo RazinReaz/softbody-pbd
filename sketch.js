@@ -10,9 +10,6 @@ let mvx, mvy;
 let mouseInteractionRadius = 0;
 
 
-
-
-
 function instructions() {
   push();
     noStroke();
@@ -33,11 +30,12 @@ let showMethods = [
 ];
 let rigMethods = [
   { name: "Perimeter", value: SoftBodyRigMethod.PERIMETER },
-  { name: "Grid", value: SoftBodyRigMethod.GRID }
+  { name: "Grid", value: SoftBodyRigMethod.GRID },
+  // { name: "Half grid", value: SoftBodyRigMethod.HALFGRID },
 ];
 
 let selectedRigMethod = SoftBodyRigMethod.GRID;
-let selectedShowMethod = SoftBodyShowMethod.SURFACE;
+let selectedShowMethod = SoftBodyShowMethod.RIG;
 
 function createSoftBodyUI() {
   // Show method buttons
@@ -102,9 +100,9 @@ function setup() {
   left = new Polygon([createVector(0, 0), createVector(50, height), createVector(100, height), createVector(50, 0)]);
   right = new Polygon([createVector(width, 0), createVector(width - 50, 0), createVector(width - 50, height), createVector(width, height)]);
   ceiling = new Polygon([createVector(0, 0), createVector(width, 0), createVector(width, -50), createVector(0, -50)]);
-  polygons.push(new Polygon(500, 250, 9));
+  // polygons.push(new Polygon(500, 250, 9));
   // polygons.push(new Polygon(100, 300, 7));
-  polygons.push(new Polygon(350, 400, 5));
+  // polygons.push(new Polygon(350, 400, 5));
   polygons.push(ceiling);
   polygons.push(floor);
   polygons.push(left);
@@ -112,7 +110,7 @@ function setup() {
 
 }
 
-let dt = 10;
+let dt = 1;
 
 function draw() {
   background(51);
@@ -147,13 +145,14 @@ function draw() {
   for (let i=0; i < SOLVER_ITERATIONS; i++) {
     // solve all constraints
     softBody.solveCollisionConstraints();
-    softBody.solveSelfCollisionConstraints();
+    softBody.solveSelfCollisionConstraints(dt);
     softBody.solveSpringConstraints();
   }
   
   //post-solve step
   softBody.updateVelocity(dt);
   softBody.updateCollidingMassVelocity(RESTITUTION, FRICTION, dt);
+  softBody.updateSelfCollidingMassVelocity(1, 0.2, dt);
   softBody.updatePosition();
 
 }

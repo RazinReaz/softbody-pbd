@@ -58,6 +58,9 @@ I could not get it to work properly when the softbody collides at high velocity.
 Just for fun, here is one of the bugs I faced:\
 ![buggy self collision resolution](./assets/gif/self-collision-fail-1.gif)
 
+Okay so update, I found a bug and fixed it. turns out, I was passing an undefined value to the collision resolve code. After fixing it and setting friction to 1: I got this:
+![friction 1](./assets/gif/self%20colision%20bug%20fix%20friction%201.gif). I just have to find the correct balance of the friction value. `0.3` works nice.
+
 ## Challenges
 - for a grid based structure, th simulation is more lifelike. But the simulation dropped in performance when the softbody hit the floor for the first time. The problem I identified was creating new `p5.Vector` objects every frame, which called the garbage collector extensively. Reusing the same object mitigated the problem somewhat with improved performance. Another reason was (which was most probably the defining factor) is that the fps drop only occured when I was drawing all the grid points and springs. The profiler showed that the `show()` method call was eating up a lot of time. So I changed the show ethod to surface and only draw the perimeter of the soft body.  
 

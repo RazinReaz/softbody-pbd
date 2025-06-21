@@ -10,7 +10,8 @@ const SoftBodyShowMethod = {
 const SoftBodyRigMethod = {
   DOUBLE: 0,
   PERIMETER: 1,
-  GRID: 2
+  GRID: 2,
+  HALFGRID: 3
 }
 
 
@@ -209,8 +210,48 @@ class Soft_body {
       } 
 
 
-    }
+    } else if (this.rigMethod === SoftBodyRigMethod.HALFGRID) {
+      for (let i = 0; i < height; i++) {
+        for (let j = 0; j < width; j++) {
+          this.masses.push(new Mass_point(currentPos.x, currentPos.y, MASSPOINT_MASS));
+          currentPos.x += SOFTBODY_SIZE;
+        }
+        currentPos.x = positionx;
+        currentPos.y += SOFTBODY_SIZE;
+      }
 
+      for (let i = 0; i < height - 1; i++) {
+        for (let j = 0; j < width - 1; j++) {
+          let idx = i * width + j;
+          let m1 = this.masses[idx];
+          let m2 = this.masses[idx + 1];
+          let m3 = this.masses[idx + width];
+          let m4 = this.masses[idx + width + 1];
+          let d12 = dist(m1.position.x, m1.position.y, m2.position.x, m2.position.y);
+          let d13 = dist(m1.position.x, m1.position.y, m3.position.x, m3.position.y);
+          this.springs.push(new Spring(m1, m2, d12, this.stiffnessMultiplier));
+          this.springs.push(new Spring(m1, m3, d13, this.stiffnessMultiplier));
+          if ((i + j) % 2) {
+            let d23 = dist(m2.position.x, m2.position.y, m3.position.x, m3.position.y);
+            this.springs.push(new Spring(m2, m3, d23, this.stiffnessMultiplier));
+          } else {
+            let d14 = dist(m1.position.x, m1.position.y, m4.position.x, m4.position.y);
+            this.springs.push(new Spring(m1, m4, d14, this.stiffnessMultiplier));
+          }
+
+          if ( j === width - 2) {
+            let d24 = dist(m2.position.x, m2.position.y, m4.position.x, m4.position.y);
+            this.springs.push(new Spring(m2, m4, d24, this.stiffnessMultiplier));
+          }
+          if (i === height - 2) {
+            let d34 = dist(m3.position.x, m3.position.y, m4.position.x, m4.position.y);
+            this.springs.push(new Spring(m3, m4, d34, this.stiffnessMultiplier));
+          }
+        }
+      } 
+
+
+    }
   }
 
   #getPerimeterPoints() {
@@ -218,7 +259,7 @@ class Soft_body {
       return this.masses
     }
 
-    else if (this.rigMethod === SoftBodyRigMethod.GRID) {
+    else if (this.rigMethod === SoftBodyRigMethod.GRID || this.rigMethod === SoftBodyRigMethod.HALFGRID) {
       let perimeterPoints = [];
       // push the first row into the perimeter
       for (let i = 0; i < this.width; i++) {
@@ -423,9 +464,8 @@ class Soft_body {
     // iterate through the map
     for (const [key, constraint] of this.selfCollisionConstraints.entries()) {
       let { massA, massB } = constraint;
-      // n : A => B
-      this._tempVectors[0].set(massB.predictedPosition.x, massB.predictedPosition.y)
-      this._tempVectors[0].sub(massA.predictedPosition);
+      // n : A --> B
+      this._tempVectors[0].set(massB.predictedPosition.x, massB.predictedPosition.y).sub(massA.predictedPosition);
 
       const distance = this._tempVectors[0].mag();
       const constraintValue = distance - massA.radius - massB.radius;
@@ -535,5 +575,34 @@ class Soft_body {
     // for (let mass of this.masses){
     //   mass.velocity.add(mass.accumulatedVelocity);
     // }
+  }
+  updateSelfCollidingMassVelocity(restitution, friction, dt) {
+    for (const [key, constraint] of this.selfCollisionConstraints.entries()) {
+      // console.log(`in self collision velocity update for ${constraint}`)
+      let { massA, massB } = constraint;
+  
+      this._tempVectors[0].set(massB.predictedPosition.x, massB.predictedPosition.y);
+      const normal = this._tempVectors[0].sub(massA.predictedPosition).normalize();
+      this._tempVectors[1].set(massB.velocity.x, massB.velocity.y).sub(massA.velocity);
+      const relVel = this._tempVectors[1];
+      const normalVel = relVel.dot(normal);
+  
+      if (normalVel >= 0) continue; // already separating
+  
+      const impulseMag = -(1 + restitution) * normalVel / (massA.w + massB.w);
+      this._tempVectors[2].set(normal.x, normal.y).mult(impulseMag * massA.w);
+      massA.velocity.sub(this._tempVectors[2]);
+      this._tempVectors[2].set(normal.x, normal.y).mult(impulseMag * massB.w);
+      massB.velocity.add(this._tempVectors[2]);
+  
+      // Optional: tangential friction impulse (project relative velocity onto tangent)
+      const tangent = this._tempVectors[3].set(-normal.y, normal.x);
+      const tangentialVel = relVel.dot(tangent);
+      const frictionImpulseMag = -tangentialVel * friction;
+      this._tempVectors[3].mult(frictionImpulseMag * massA.w);
+      massA.velocity.sub(this._tempVectors[3]);
+      this._tempVectors[3].set(-normal.y, normal.x).mult(frictionImpulseMag * massB.w);
+      massB.velocity.add(this._tempVectors[3]);
+    }
   }
 }
