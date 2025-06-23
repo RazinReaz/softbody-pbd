@@ -13,7 +13,7 @@ let rigMethods = [
 
 
 let selectedRigMethod = SoftBodyRigMethod.GRID;
-let selectedShowMethod = SoftBodyShowMethod.RIG;
+let selectedShowMethod = SoftBodyShowMethod.SURFACE;
 
 
 function createSoftBodyUI() {
