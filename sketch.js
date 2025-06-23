@@ -100,9 +100,9 @@ function setup() {
   left = new Polygon([createVector(0, 0), createVector(50, height), createVector(100, height), createVector(50, 0)]);
   right = new Polygon([createVector(width, 0), createVector(width - 50, 0), createVector(width - 50, height), createVector(width, height)]);
   ceiling = new Polygon([createVector(0, 0), createVector(width, 0), createVector(width, -50), createVector(0, -50)]);
-  // polygons.push(new Polygon(500, 250, 9));
+  polygons.push(new Polygon(500, 250, 9));
   // polygons.push(new Polygon(100, 300, 7));
-  // polygons.push(new Polygon(350, 400, 5));
+  polygons.push(new Polygon(350, 400, 5));
   polygons.push(ceiling);
   polygons.push(floor);
   polygons.push(left);
@@ -152,7 +152,7 @@ function draw() {
   //post-solve step
   softBody.updateVelocity(dt);
   softBody.updateCollidingMassVelocity(RESTITUTION, FRICTION, dt);
-  softBody.updateSelfCollidingMassVelocity(1, 0.2, dt);
+  // softBody.updateSelfCollidingMassVelocity(1, 0.2, dt);
   softBody.updatePosition();
 
 }

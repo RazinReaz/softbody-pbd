@@ -7,6 +7,7 @@ class Mass_point{
         this.w = 1/m;
 
         this.radius = MASSPOINT_RADIUS;
+        this.repulseRadius = this.radius * REPULSE_RADIUS_MULTIPLIER;
         this.predictedPosition = createVector(0,0);
 
         // for spatial hashing and self collision

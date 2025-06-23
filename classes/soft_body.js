@@ -372,7 +372,7 @@ class Soft_body {
             const key = mass.generateKeyWith(neighbour)
             const distSq = distSquared(mass.predictedPosition, neighbour.predictedPosition);
             if (distSq == 0) continue; 
-            const sum_radius = mass.radius + neighbour.radius;
+            const sum_radius = mass.repulseRadius + neighbour.repulseRadius;
             if (distSq < sum_radius * sum_radius && !this.selfCollisionConstraints.has(key)) {
                 // Add the constraint to the map
                 this.selfCollisionConstraints.set(key, {
@@ -468,7 +468,7 @@ class Soft_body {
       this._tempVectors[0].set(massB.predictedPosition.x, massB.predictedPosition.y).sub(massA.predictedPosition);
 
       const distance = this._tempVectors[0].mag();
-      const constraintValue = distance - massA.radius - massB.radius;
+      const constraintValue = distance - massA.repulseRadius - massB.repulseRadius;
 
       if (constraintValue >= 0) continue;
 
@@ -534,75 +534,28 @@ class Soft_body {
       v_tangent.mult(frictionMagnitude)
       mass.velocity.set(v_normal.x, v_normal.y).add(v_tangent);    
     }
-
-    // // do something for self collisions too
-    // for (const [key, constraint] of this.selfCollisionConstraints.entries()) {
-    //   let { massA:mass1, massB:mass2 } = constraint;
-    //   this._tempVectors[0].set(mass1.predictedPosition.x, mass1.predictedPosition.y);
-    //   this._tempVectors[0].sub(mass2.predictedPosition).normalize();
-    //   // Reflect velocities of mass1 and mass2 using this._tempVectors[0] as the normal
-    //   let n = this._tempVectors[0];
-    //   let v1 = mass1.velocity;
-    //   let v2 = mass2.velocity;
-
-    //   // v' = v - 2 * (v . n) * n
-    //   let dot1 = v1.dot(n);
-    //   let dot2 = v2.dot(n);
-
-    //   v1.sub(p5.Vector.mult(n, 2 * dot1));
-    //   v2.sub(p5.Vector.mult(n, 2 * dot2)); 
-    // }
-    
-    // for (let mass of this.masses) {
-    //   mass.accumulatedVelocity.set(0, 0);
-    // }
-      
-    // for (const [key, constraint] of this.selfCollisionConstraints.entries()) {
-    //   let { massA:mass1, massB:mass2 } = constraint;
-    //   let n = p5.Vector.sub(mass1.predictedPosition, mass2.predictedPosition);
-    //   let relVel = p5.Vector.sub(mass1.velocity, mass2.velocity);
-    //   const dotP = n.dot(relVel);
-    //   const sumW = mass1.w + mass2.w;
-    //   const dsq = n.magSq();
-    //   const m = 2 * dotP / (sumW * dsq)
-    
-    //   this._tempVectors[0].set(n.x, n.y).mult(m * mass1.w * -2);
-    //   mass1.accumulatedVelocity.add(this._tempVectors[0]);
-    //   this._tempVectors[0].set(n.x, n.y).mult(m * mass2.w * 2);
-    //   mass2.accumulatedVelocity.add(this._tempVectors[0]);
-    // }
-    
-    // for (let mass of this.masses){
-    //   mass.velocity.add(mass.accumulatedVelocity);
-    // }
   }
+  
   updateSelfCollidingMassVelocity(restitution, friction, dt) {
     for (const [key, constraint] of this.selfCollisionConstraints.entries()) {
       // console.log(`in self collision velocity update for ${constraint}`)
       let { massA, massB } = constraint;
-  
-      this._tempVectors[0].set(massB.predictedPosition.x, massB.predictedPosition.y);
-      const normal = this._tempVectors[0].sub(massA.predictedPosition).normalize();
-      this._tempVectors[1].set(massB.velocity.x, massB.velocity.y).sub(massA.velocity);
-      const relVel = this._tempVectors[1];
-      const normalVel = relVel.dot(normal);
-  
-      if (normalVel >= 0) continue; // already separating
-  
-      const impulseMag = -(1 + restitution) * normalVel / (massA.w + massB.w);
-      this._tempVectors[2].set(normal.x, normal.y).mult(impulseMag * massA.w);
-      massA.velocity.sub(this._tempVectors[2]);
-      this._tempVectors[2].set(normal.x, normal.y).mult(impulseMag * massB.w);
-      massB.velocity.add(this._tempVectors[2]);
-  
-      // Optional: tangential friction impulse (project relative velocity onto tangent)
-      const tangent = this._tempVectors[3].set(-normal.y, normal.x);
-      const tangentialVel = relVel.dot(tangent);
-      const frictionImpulseMag = -tangentialVel * friction;
-      this._tempVectors[3].mult(frictionImpulseMag * massA.w);
-      massA.velocity.sub(this._tempVectors[3]);
-      this._tempVectors[3].set(-normal.y, normal.x).mult(frictionImpulseMag * massB.w);
-      massB.velocity.add(this._tempVectors[3]);
+      // reflect both velocities
+      vecSubSet(this._tempVectors[0], massB.predictedPosition, massA.predictedPosition);
+      this._tempVectors[0].normalize();
+      let n = this._tempVectors[0];
+
+      let vA = massA.velocity;
+      let vB = massB.velocity;
+
+      let dotA = vA.dot(n);
+      let dotB = vB.dot(n);
+      // v' = v - 2 * (v . n) * n
+      vecMultSet(this._tempVectors[1], n, 2 * dotA);
+      vA.sub(this._tempVectors[1]);
+
+      vecMultSet(this._tempVectors[2], n, 2 * dotB);
+      vB.sub(this._tempVectors[2]);
     }
   }
 }
