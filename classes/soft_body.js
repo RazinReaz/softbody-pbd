@@ -347,7 +347,7 @@ class Soft_body {
 
       // collision found between mass and a polygon
       this._tempVectors[0].set(contact.x, contact.y);
-      let contactPoint = this._tempVectors[0].copy(); //! copy or not?
+      let contactPoint = this._tempVectors[0].copy();
       let normal = collidingLine.normal();
       
       this.collisionConstraints.push({
@@ -390,8 +390,8 @@ class Soft_body {
   applyExternalForce(extForceX, extForceY, deltaTime) {
     // let forceVector = createVector(extForceX, extForceY);
     for (let mass of this.masses) {
-      this._tempVectors[0].set(extForceX, extForceY);
-      mass.velocity.add(this._tempVectors[0].mult(deltaTime * mass.w));
+      this._tempVectors[0].set(extForceX, extForceY).mult(deltaTime * mass.w);
+      mass.velocity.add(this._tempVectors[0]);
     }
   }
 
@@ -404,8 +404,7 @@ class Soft_body {
   projectPosition(deltaTime) {
     // this function will calculate the predicted position of each of the particles
     for (let mass of this.masses) {
-      this._tempVectors[0].set(mass.velocity.x, mass.velocity.y);
-      this._tempVectors[0].mult(deltaTime);
+      vecSetMult(this._tempVectors[0], mass.velocity, deltaTime)
       this._tempVectors[0].add(mass.position);
       mass.predictedPosition.set(this._tempVectors[0].x, this._tempVectors[0].y);
       // mass.predictedPosition = p5.Vector.add(mass.position, p5.Vector.mult(mass.velocity, deltaTime));
@@ -432,9 +431,9 @@ class Soft_body {
     // const delx2 = p5.Vector.mult(n,  lambda * mass2.w * spring.stiffness);
     // mass1.predictedPosition.add(delx1);
     // mass2.predictedPosition.add(delx2);
-    this._tempVectors[0].set(n.x, n.y).mult(-lambda * mass1.w * spring.stiffness);
+    vecSetMult(this._tempVectors[0], n, -lambda * mass1.w * spring.stiffness)
     mass1.predictedPosition.add(this._tempVectors[0]);
-    this._tempVectors[0].set(n.x, n.y).mult(lambda * mass2.w * spring.stiffness);
+    vecSetMult(this._tempVectors[0], n, lambda * mass2.w * spring.stiffness)
     mass2.predictedPosition.add(this._tempVectors[0]);
   }
 
@@ -449,11 +448,12 @@ class Soft_body {
       let {contactPoint, normal, index} = constraint;
       // evaluate the constraint C(p) = (p - con).n - d >= 0
       let mass = this.masses[index];
-      this._tempVectors[0].set(mass.predictedPosition.x, mass.predictedPosition.y).sub(contactPoint);
+      
+      vecSetSub(this._tempVectors[0], mass.predictedPosition, contactPoint);
       let constraint_val = this._tempVectors[0].dot(normal) - mass.radius;
 
       if (constraint_val >= 0) continue;
-      this._tempVectors[1].set(normal.x, normal.y).mult(-1 * (constraint_val + EPSILON)* mass.w);
+      vecSetMult(this._tempVectors[1], normal, -1 * (constraint_val + EPSILON)* mass.w);
       mass.predictedPosition.add(this._tempVectors[1]);
       // let deltax = p5.Vector.mult(normal, -1 * (constraint_val + EPSILON) * mass.w);
       // mass.predictedPosition.add(deltax);
@@ -465,8 +465,7 @@ class Soft_body {
     for (const [key, constraint] of this.selfCollisionConstraints.entries()) {
       let { massA, massB } = constraint;
       // n : A --> B
-      this._tempVectors[0].set(massB.predictedPosition.x, massB.predictedPosition.y).sub(massA.predictedPosition);
-
+      vecSetSub(this._tempVectors[0], massB.predictedPosition, massA.predictedPosition);
       const distance = this._tempVectors[0].mag();
       const constraintValue = distance - massA.repulseRadius - massB.repulseRadius;
 
@@ -475,18 +474,16 @@ class Soft_body {
       const n = this._tempVectors[0].normalize();
       const lambda = -1.0 * constraintValue / (massA.w + massB.w);
       const stiffness = 1;
-      this._tempVectors[1].set(n.x, n.y).mult(-lambda * massA.w * stiffness);
+      vecSetMult(this._tempVectors[1], n, -lambda * massA.w * stiffness)
       massA.predictedPosition.add(this._tempVectors[1]);
-      this._tempVectors[1].set(n.x, n.y).mult(lambda * massB.w * stiffness);
+      vecSetMult(this._tempVectors[1], n, lambda * massB.w * stiffness)
       massB.predictedPosition.add(this._tempVectors[1]);
 
-      this._tempVectors[0].set(massA.predictedPosition.x, massA.predictedPosition.y);
-      this._tempVectors[0].sub(massA.position);
-      this._tempVectors[1].set(massB.predictedPosition.x, massB.predictedPosition.y)
-      this._tempVectors[1].sub(massB.position);
+      vecSetSub(this._tempVectors[0], massA.predictedPosition, massA.position)
+      vecSetSub(this._tempVectors[1], massB.predictedPosition, massB.position)
 
-      this._tempVectors[2].set(this._tempVectors[0].x, this._tempVectors[0].y);
-      this._tempVectors[2].add(this._tempVectors[1]).mult(0.5);
+      vecSetAdd(this._tempVectors[2], this._tempVectors[0], this._tempVectors[1])
+      this._tempVectors[2].mult(0.5);
       // _tempVectors[2] contains the average velocity
 
       const friction = 1;
@@ -499,10 +496,8 @@ class Soft_body {
 
   updateVelocity(deltaTIme) {
     for (let mass of this.masses) {
-      // let deltax = p5.Vector.sub(mass.predictedPosition, mass.position);
-      this._tempVectors[0].set(mass.predictedPosition.x, mass.predictedPosition.y);
-      this._tempVectors[0].sub(mass.position).div(deltaTIme);
-      // mass.velocity = p5.Vector.div(deltax, deltaTIme);
+      vecSetSub(this._tempVectors[0], mass.predictedPosition, mass.position)
+      this._tempVectors[0].div(deltaTIme);
       mass.velocity.set(this._tempVectors[0].x, this._tempVectors[0].y);
     }
   }
@@ -532,18 +527,21 @@ class Soft_body {
       // friction magnitude is some number between 0 and 1
       // the more the velocity is aligned to the normal, the more the friction magnitude
       v_tangent.mult(frictionMagnitude)
-      mass.velocity.set(v_normal.x, v_normal.y).add(v_tangent);    
+      vecSetAdd(mass.velocity, v_normal, v_tangent)
+      // mass.velocity.set(v_normal.x, v_normal.y).add(v_tangent);    
     }
   }
-  
+
   updateSelfCollidingMassVelocity(restitution, friction, dt) {
     for (const [key, constraint] of this.selfCollisionConstraints.entries()) {
       // console.log(`in self collision velocity update for ${constraint}`)
       let { massA, massB } = constraint;
       // reflect both velocities
-      vecSubSet(this._tempVectors[0], massB.predictedPosition, massA.predictedPosition);
+      vecSetSub(this._tempVectors[0], massB.predictedPosition, massA.predictedPosition);
       this._tempVectors[0].normalize();
       let n = this._tempVectors[0];
+
+      console.log(n);
 
       let vA = massA.velocity;
       let vB = massB.velocity;
